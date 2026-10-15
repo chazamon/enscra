@@ -814,7 +814,7 @@ const TIDEWIND_VESSELS = [
   {name:"Gale Herald",        colour:"White", grade:1, atk:2, def:2, effect:"Efficient body", copies:3},
   {name:"Whisperwind Page",   colour:"White", grade:1, atk:1, def:2, effect:"When played, target Vessel gets -1/-0 until end of turn.", copies:3},
   {name:"Riptide Caller",     colour:"Blue",  grade:2, atk:3, def:3, effect:"When played, draw a card, then discard a card.", copies:3},
-  {name:"Zephyr Tactician",   colour:"White", grade:2, atk:2, def:4, effect:"Friendly Vessels in this column cannot be targeted by enemy Rites.", copies:2},
+  {name:"Zephyr Tactician",   colour:"White", grade:2, atk:2, def:4, effect:"When played, enemy Rites can't target this until your next turn.", copies:2},
   {name:"Wavebreak Sentinel", colour:"Blue",  grade:2, atk:4, def:2, effect:"Tempo beater", copies:2},
   {name:"Stormcrown Avatar",  colour:"White", grade:3, atk:4, def:5, effect:"When played, target Vessel cannot attack next turn.", copies:2},
   {name:"Abyssal Leviathan",  colour:"Blue",  grade:3, atk:5, def:4, effect:"When played, return target enemy Vessel to its owner's hand.", copies:2},
@@ -865,7 +865,7 @@ const CARD_MECHANICS = {
   "Current Adept":        { onPlay: { moveFriendlyAdjacent: true } },
   "Whisperwind Page":     { onPlay: { debuffTargetVessel: { atk:-1, def:0 } } },
   "Riptide Caller":       { onPlay: { drawThenDiscard: true } },
-  "Zephyr Tactician":     { protectedFromEnemyRites: true },
+  "Zephyr Tactician":     { riteShieldOnPlay: true },
   "Stormcrown Avatar":    { onPlay: { stunTargetVessel: true } },
   "Abyssal Leviathan":    { onPlay: { bounceTargetEnemyVessel: true } },
   // Rites — cast from hand, resolve once, go to the Void. riteEffect keys reuse the same vocabulary as
@@ -934,7 +934,8 @@ function getEffectiveStats(playerIdx, colIdx){
 // protects itself under this board model (see the CARD_MECHANICS note above).
 function isProtectedFromEnemyRite(zonePlayerIdx, colIdx, casterIdx){
   const v = state.players[zonePlayerIdx].front[colIdx];
-  return !!(v && mech(v.name).protectedFromEnemyRites && zonePlayerIdx!==casterIdx);
+  // Zephyr Tactician: shielded from enemy Rites from the moment it's played until its owner's next turn starts.
+  return !!(v && v.riteShielded && zonePlayerIdx!==casterIdx);
 }
 
 // Non-combat "deal N to a Vessel" (Magma Drifter). This prototype has no persistent damage-counter
@@ -1602,7 +1603,7 @@ function startTurn(){
   state.selectedAttackerZone = null;
   p.front.forEach(v=>{
     if(!v) return;
-    v.sick = false; v.attacked = false;
+    v.sick = false; v.attacked = false; v.riteShielded = false;
     // Stormcrown Avatar's "cannot attack next turn": stunTurns was set when the effect resolved: the
     // very next time this Vessel's owner starts a turn, it sits out (stunned) that turn, then is back
     // to normal from the turn after.
@@ -1841,7 +1842,7 @@ function placeSelected(colIdx){
   // (= its grade), same pool as Rites/Realms.
   p.essence -= card.grade;
   flashEssenceSpend(state.current);
-  p.front[colIdx] = {...card, sick:true};
+  p.front[colIdx] = {...card, sick:true, riteShielded: !!mech(card.name).riteShieldOnPlay};
   p.hand = p.hand.filter(c=>c.id!==card.id);
   state.selectedCardId = null;
   log(`${p.name} plays ${card.name} (${card.colour} G${card.grade}) to column ${colIdx+1} (-${card.grade} essence).`);
@@ -2154,7 +2155,7 @@ function applyRemotePlace(colIdx, card){
   const p = cur();
   const idx = p.hand.findIndex(c=>c.hidden);
   if(idx>=0) p.hand.splice(idx,1);
-  p.front[colIdx] = {...card, sick:true};
+  p.front[colIdx] = {...card, sick:true, riteShielded: !!mech(card.name).riteShieldOnPlay};
   log(`${p.name} plays ${card.name} (${card.colour} G${card.grade}) to column ${colIdx+1}.`);
   playSfx('play');
   render();
@@ -2527,6 +2528,8 @@ const GLOSSARY = [
     def:'This change only lasts until the current turn ends — it wears off automatically and does not carry into the next turn.' },
   { key:'cannotAttackNext', term:'cannot attack next turn', regexMatch:true,
     def:'That Vessel is skipped during its controller\'s next Battle Phase, even if it would otherwise be eligible to attack.' },
+  { key:'untilNextTurn', term:'until your next turn', regexMatch:true,
+    def:'Lasts through your opponent\'s whole turn and wears off when your own next turn begins.' },
   { key:'devotionColour', term:'devotion colour', regexMatch:true,
     def:'The colour a column is currently attuned to. Only Vessels of that colour (at or below the column\'s Grade) can be placed there.' },
   { key:'permanently', term:'permanently', regexMatch:true,
