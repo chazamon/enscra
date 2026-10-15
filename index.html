@@ -746,6 +746,11 @@ body.mobile #deflectPrompt,body.mobile #riteOfferPrompt,body.mobile #phaseWarnin
 body.mobile #deflectPrompt button,body.mobile #riteOfferPrompt button,body.mobile #phaseWarningPrompt button{padding:9px 12px;}
 body.mobile #turnGuideTip{width:min(300px,calc(100vw - 16px));}
 
+/* Large board (portrait): flatter mat, tighter margins */
+body.mobile.boardLarge #mGame{--cw:calc((100vw - 12px - 14px - 8px) / 5.62);}
+body.mobile.boardLarge #mPlane{transform:rotateX(8deg);}
+#mDrawerBtns #mBoardSizeBtn b{color:#ffd76b;font-weight:700;}
+
 @media (orientation:landscape){
   body.mobile #mGame{
     --cw:min(calc((100dvh - 250px) / 2 * 795 / 1144), calc((100vw - 265px) / 5.9));
@@ -753,6 +758,17 @@ body.mobile #turnGuideTip{width:min(300px,calc(100vw - 16px));}
     grid-template-rows:auto auto minmax(0,1fr);
     grid-template-areas:"field top" "field info" "hand info";}
   #mPlane{transform:rotateX(16deg);}
+  /* ☰ sits on the left edge, board shifts right to make room */
+  body.mobile #mGame{padding-left:calc(max(6px,env(safe-area-inset-left,0px)) + 46px);}
+  body.mobile #mMenuBtn{position:fixed;z-index:120;left:max(6px,env(safe-area-inset-left,0px));top:calc(6px + env(safe-area-inset-top,0px));}
+  /* Large board: hand moves under the instruction on the right, mat fills the full height */
+  body.mobile.boardLarge #mGame{
+    --cw:min(calc((100dvh - 135px) / 2 * 795 / 1144), calc((100vw - 110px - max(190px,28vw)) / 5.62));
+    grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"field top" "field info" "field hand";}
+  body.mobile.boardLarge #mField{align-self:center;}
+  body.mobile.boardLarge #mPlane{transform:rotateX(7deg);}
+  body.mobile.boardLarge #bigInstruction{-webkit-line-clamp:4;max-height:calc(5.4em + 6px);}
   body.mobile #mInfo{align-self:start;}
   body.mobile #bigInstruction{-webkit-line-clamp:7;max-height:calc(9.45em + 6px);}
   body.mobile #handCards{padding-top:4px;}
@@ -4199,6 +4215,18 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   var logBtn=el('button',null,null,'📜 Log');
   logBtn.onclick=function(e){ e.stopPropagation(); closeDrawer(); document.body.classList.add('showLog'); };
   btns.appendChild(logBtn);
+  // board size toggle (remembered between games)
+  var sizeBtn=el('button','mBoardSizeBtn');
+  function applyBoardSize(large){
+    document.body.classList.toggle('boardLarge',large);
+    sizeBtn.innerHTML='🔍 Board size: <b>'+(large?'Large':'Normal')+'</b>';
+  }
+  var bigBoard=false; try{ bigBoard=localStorage.getItem('enscraBoardLarge')==='1'; }catch(e){}
+  applyBoardSize(bigBoard);
+  sizeBtn.onclick=function(e){ e.stopPropagation(); bigBoard=!bigBoard; applyBoardSize(bigBoard);
+    try{ localStorage.setItem('enscraBoardLarge', bigBoard?'1':'0'); }catch(e){}
+    requestAnimationFrame(function(){ render(); }); };
+  btns.appendChild(sizeBtn);
   btns.appendChild($('sfxToggleBtn'));
   var help=$('economyHelpBtn'); help.textContent='❓ How to Play'; btns.appendChild(help);
   var oldStatusBtns=$('status').querySelector('div');
@@ -4246,8 +4274,9 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
     if(hc && col){ var n=Math.max(1,hc.querySelectorAll('.cardWrap').length), avail=hand.clientWidth-10, cw=col.offsetWidth;
       var land=innerWidth>innerHeight;
       var maxW=land ? Math.max(40,(hand.clientHeight-22)*795/1144) : cw*2.0;
-      var hw=Math.max(40, Math.min(maxW, avail/(0.7*n+0.3)));
-      var ov=n>1 ? Math.max(hw*0.3, (n*hw-avail)/(n-1)) : 0;
+      var side=land && document.body.classList.contains('boardLarge'), vis=side?0.5:0.7; // hand in the side column: overlap more, bigger cards
+      var hw=Math.max(40, Math.min(maxW, avail/(vis*n+(1-vis))));
+      var ov=n>1 ? Math.max(hw*(1-vis), (n*hw-avail)/(n-1)) : 0;
       hc.style.setProperty('--hw', hw+'px'); hc.style.setProperty('--ov', ov+'px'); }
 
     // popup: shows whenever the colour picker is live and we're not waiting on a column tap
