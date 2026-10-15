@@ -776,6 +776,149 @@ body.mobile.boardLarge #mPlane{transform:rotateX(8deg);}
 }
 @media (prefers-reduced-motion:reduce){ body.mobile #mDrawer, .dpCard, body.mobile #devPopup{transition:none;} }
 </style>
+<style id="arenaSkin">
+/* ===== Arena skin — visual layer only. Every zone, id, button and handler is unchanged underneath;
+   this sheet restyles them so cards are the focus and the frame fades back. Remove this block to get
+   the previous look (a full copy of the old version also lives at backup.html). ===== */
+:root{
+  --ink:#08071a; --glass:rgba(14,12,34,.74); --glassHi:rgba(28,24,62,.82); --hair:rgba(214,196,150,.22);
+  --goldHi:#ffe9a8; --place:#6ff0b0; --target:#ffd76b;
+  --gRed:224,71,58; --gGreen:63,174,95; --gBlue:63,140,224; --gWhite:230,230,240; --gPurple:154,91,224;
+}
+
+/* ---------- Player plate: name + resource orbs ---------- */
+.boardHeader .pname{font-family:'Cinzel',Georgia,serif;font-weight:800;letter-spacing:.1em;color:#9d96bd;transition:color .2s,text-shadow .2s;}
+.board.activeSide .boardHeader .pname{color:var(--goldHi);text-shadow:0 0 10px rgba(255,215,107,.45);}
+.boardHeader .pname .active-tag{font-family:system-ui,sans-serif;font-weight:800;letter-spacing:.06em;color:var(--gold);animation:arenaBlink 1.6s ease-in-out infinite;}
+@keyframes arenaBlink{50%{opacity:.45}}
+.badge{background:var(--glass);border:1px solid rgba(255,255,255,.09);color:#f2efff;font-weight:700;font-variant-numeric:tabular-nums;
+  box-shadow:0 2px 6px rgba(0,0,0,.45);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+.badgeIcon{box-shadow:0 0 0 1px rgba(255,255,255,.25) inset,0 1px 3px rgba(0,0,0,.6);text-shadow:0 1px 1px rgba(0,0,0,.5);}
+.badge.hpBadge{border-color:rgba(255,90,90,.45);font-weight:900;text-shadow:0 0 8px rgba(255,80,80,.55);}
+.badge.hpBadge .badgeIcon{background:radial-gradient(circle at 35% 30%,#ff9a8a,#d42c2c 55%,#6e0f0f);box-shadow:0 0 8px rgba(255,70,70,.6),0 0 0 1px rgba(255,255,255,.3) inset;}
+.badge.devBadge{border-color:rgba(170,140,255,.35);}
+.badge.devBadge .badgeIcon{box-shadow:0 0 6px rgba(150,120,255,.55),0 0 0 1px rgba(255,255,255,.3) inset;}
+.badge.essenceBadge{border-color:rgba(255,200,90,.35);}
+.badge.essenceBadge .badgeIcon{box-shadow:0 0 6px rgba(255,200,90,.5),0 0 0 1px rgba(255,255,255,.3) inset;}
+.badge.deckBadge{color:#c9c4e2;}
+
+/* ---------- Slots: quiet drop-targets, cards stand on them ---------- */
+.colBox{border:none !important;border-radius:9px;background:rgba(255,255,255,.022) !important;
+  box-shadow:0 0 0 1px rgba(190,180,255,.10) inset;transition:box-shadow .2s,background .2s;}
+.vesselZone{background:transparent !important;}
+/* "FRONT" placeholder becomes a faint sigil; text stays in the DOM */
+.vesselPlaceholder{font-size:0 !important;color:transparent !important;}
+.vesselPlaceholder::before{content:"◇";font-size:clamp(12px,3.2vmin,26px);color:rgba(200,190,255,.13);}
+/* devoted columns glow with their colour */
+.colBox.devoted{box-shadow:0 0 0 1px rgba(var(--dc),.38) inset,0 -10px 18px -10px rgba(var(--dc),.45) inset;
+  background:radial-gradient(120% 60% at 50% 100%,rgba(var(--dc),.22),rgba(var(--dc),.04) 70%) !important;}
+.colBox.dev-Red{--dc:var(--gRed);} .colBox.dev-Green{--dc:var(--gGreen);} .colBox.dev-Blue{--dc:var(--gBlue);}
+.colBox.dev-White{--dc:var(--gWhite);} .colBox.dev-Purple{--dc:var(--gPurple);}
+.colBox.devoted .vesselPlaceholder::before{color:rgba(var(--dc),.5);}
+/* devotion strip: a small gem + grade, no box */
+.devStrip{background:transparent !important;border-top:none !important;font-weight:800;letter-spacing:.04em;color:#e8e4ff;}
+.colBox.devoted .devStrip{color:rgb(var(--dc));text-shadow:0 0 6px rgba(var(--dc),.6);}
+.colBox.dev-White .devStrip{color:#f4f4ff;}
+.devStripEmpty{font-size:0 !important;}
+.devStripEmpty::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;border:1px solid rgba(200,190,255,.28);}
+.colDot{box-shadow:0 0 6px currentColor;}
+.dot-Red{color:var(--red);} .dot-Green{color:var(--green);} .dot-Blue{color:var(--blue);} .dot-White{color:var(--white);} .dot-Purple{color:var(--purple);}
+/* placed cards lift off the mat */
+.vesselZone .card.ecard{filter:drop-shadow(0 4px 6px rgba(0,0,0,.75)) drop-shadow(0 0 1px #000);}
+.vesselZone .card.ecard.sick{opacity:.7;filter:saturate(.6) drop-shadow(0 4px 6px rgba(0,0,0,.75));}
+
+/* interaction states: pulsing glows instead of dashed outlines */
+.colBox.placeable{animation:arenaPulsePlace 1.3s ease-in-out infinite;background:rgba(111,240,176,.07) !important;}
+.colBox.targetable{animation:arenaPulseTarget 1.1s ease-in-out infinite;background:rgba(255,215,107,.07) !important;}
+@keyframes arenaPulsePlace{0%,100%{box-shadow:0 0 0 1.5px rgba(111,240,176,.75) inset,0 0 6px rgba(111,240,176,.35);}50%{box-shadow:0 0 0 2px rgba(111,240,176,1) inset,0 0 16px rgba(111,240,176,.7);}}
+@keyframes arenaPulseTarget{0%,100%{box-shadow:0 0 0 1.5px rgba(255,215,107,.8) inset,0 0 6px rgba(255,215,107,.35);}50%{box-shadow:0 0 0 2px rgba(255,233,168,1) inset,0 0 18px rgba(255,215,107,.75);}}
+.zoneOverlay{left:6%;right:6%;bottom:4%;margin:auto;width:max-content;max-width:88%;white-space:normal;line-height:1.15;
+  background:rgba(6,5,16,.82);border-radius:999px;padding:1px 6px;letter-spacing:.04em;}
+.colBox.placeable .zoneOverlay{color:var(--place);box-shadow:0 0 0 1px rgba(111,240,176,.6);}
+.colBox.targetable .zoneOverlay{color:var(--target);box-shadow:0 0 0 1px rgba(255,215,107,.6);}
+
+/* ---------- Void + Deck piles ---------- */
+.voidDeckBox{background:transparent !important;box-shadow:none;}
+.voidZoneBig{border-radius:7px;box-shadow:0 0 0 1px rgba(224,71,58,.22) inset;background:radial-gradient(circle at 50% 60%,rgba(120,30,40,.28),rgba(20,8,14,.25)) !important;}
+.voidZoneBig .mzLabel{font-family:'Cinzel',Georgia,serif;letter-spacing:.12em;color:rgba(255,170,160,.55);}
+.voidZoneBig .mzCount{color:#ffb3a8;font-weight:800;}
+.voidCountBadge{background:rgba(10,4,8,.9);border-color:rgba(255,120,110,.5);color:#ff8f82;border-radius:999px;}
+.deckStrip{background:transparent !important;border-top:none !important;}
+.deckStrip .mzCount{color:var(--gold);text-shadow:0 0 6px rgba(255,215,107,.5);font-variant-numeric:tabular-nums;}
+
+/* ---------- Instruction card ---------- */
+#bigInstruction{background:linear-gradient(135deg,rgba(30,24,70,.88),rgba(16,22,52,.88)) !important;border:1px solid rgba(150,130,255,.45) !important;
+  border-left:3px solid var(--gold) !important;box-shadow:0 6px 20px rgba(0,0,0,.45),0 0 18px rgba(110,90,230,.18);color:#ece9ff;}
+
+/* ---------- Buttons ---------- */
+#nextPhaseBtn:not(:disabled){background:linear-gradient(180deg,#ffe28a,#e0a93a) !important;color:#1c1204 !important;border:1px solid #fff2c4 !important;font-weight:800;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 14px rgba(255,215,107,.55),0 3px 8px rgba(0,0,0,.5);text-shadow:none;animation:arenaGo 2.2s ease-in-out infinite;}
+@keyframes arenaGo{50%{box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 22px rgba(255,215,107,.85),0 3px 8px rgba(0,0,0,.5);}}
+#nextPhaseBtn:disabled{opacity:.75 !important;background:rgba(40,34,80,.7) !important;border:1px solid rgba(150,130,255,.35) !important;color:#b8b0e0 !important;font-style:italic;}
+
+/* ---------- Hand ---------- */
+#handCards .cardWrap .card.ecard{filter:drop-shadow(0 6px 8px rgba(0,0,0,.7)) drop-shadow(0 0 1px #000);}
+#handCards .cardWrap .card.ecard.selected{filter:drop-shadow(0 0 4px var(--goldHi)) drop-shadow(0 0 12px rgba(255,215,107,.8));}
+
+/* ===================== PHONE ===================== */
+/* full-bleed mat: no framed box, just a soft playmat glow with a lit centre seam */
+body.mobile #mPlane{background:radial-gradient(90% 60% at 50% 28%,rgba(70,90,170,.16),transparent 70%),
+    radial-gradient(90% 60% at 50% 74%,rgba(150,80,190,.18),transparent 70%) !important;
+  border:none !important;box-shadow:none !important;border-radius:0;padding-left:2px;padding-right:2px;}
+body.mobile #mPlane::before{left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(255,215,107,.55) 30%,rgba(255,215,107,.55) 70%,transparent);box-shadow:0 0 12px rgba(255,215,107,.4);}
+/* your plate sits at the bottom edge of your side, next to your hand (opponent's stays on top) */
+body.mobile #board-0{display:flex;flex-direction:column-reverse;}
+body.mobile #board-0 .boardHeader{margin:3px 0 0;}
+body.mobile .boardHeader .pname{font-size:10.5px;}
+body.mobile .badge{font-size:11px;padding:1px 7px 1px 1px;}
+body.mobile .badgeIcon{width:16px;height:16px;font-size:8.5px;}
+body.mobile .badge.hpBadge{font-size:13px;padding-right:8px;}
+body.mobile .badge.hpBadge .badgeIcon{width:18px;height:18px;}
+body.mobile .row{gap:5px;}
+body.mobile .colBox{border-radius:7px;}
+body.mobile .devStrip{height:13px;font-size:8.5px;}
+body.mobile .zoneOverlay{font-size:7px;padding:1px 4px;}
+/* Void (top) and Deck (bottom) as two small card piles in the 6th column */
+body.mobile .voidDeckBox{display:flex;flex-direction:column;gap:3px;height:calc(var(--cw)*1144/795 + 13px) !important;}
+body.mobile .voidZoneBig{flex:1 1 0 !important;height:auto !important;min-height:0;flex-direction:column;gap:1px;}
+body.mobile .voidZoneBig .mzLabel{display:block !important;font-size:7px;}
+body.mobile .deckStrip{flex:1 1 0 !important;height:auto !important;position:relative;padding:0;border-radius:7px;}
+body.mobile .deckStrip .cardBackMini{width:auto !important;height:92% !important;aspect-ratio:795/1144;border-radius:4px !important;box-shadow:2px 2px 0 #1a1630,4px 4px 0 #120f24,0 4px 8px rgba(0,0,0,.6) !important;}
+body.mobile .deckStrip .mzCount{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);font-size:11px;font-weight:900;background:rgba(6,5,16,.85);padding:0 5px;border-radius:999px;box-shadow:0 0 0 1px rgba(255,215,107,.5);}
+/* phase banner + pip track */
+#mPhaseWrap{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;}
+#mPhaseWrap #mPhaseLabel{flex:none;width:100%;padding:3px 0 1px;font-size:14px;}
+#mPhasePips{display:flex;gap:4px;align-items:center;}
+#mPhasePips i{width:14px;height:3px;border-radius:2px;background:rgba(200,190,255,.2);transition:background .2s,width .2s;}
+#mPhasePips i.done{background:rgba(255,215,107,.45);}
+#mPhasePips i.now{width:22px;background:var(--gold);box-shadow:0 0 6px var(--gold);}
+body.mobile #nextPhaseBtn{border-radius:999px !important;padding:7px 14px !important;font-size:12.5px !important;}
+body.mobile #mDevChip{box-shadow:0 0 10px rgba(255,215,107,.35);}
+/* top bar + instruction */
+body.mobile #turnInfo{font-family:'Cinzel',Georgia,serif;letter-spacing:.06em;color:#d8d2f4;}
+body.mobile #mMenuBtn{background:var(--glassHi);border-color:rgba(255,215,107,.45);box-shadow:0 2px 10px rgba(0,0,0,.5),0 0 10px rgba(255,215,107,.18);}
+/* hand: fanned like you're holding it; selected card rises */
+body.mobile #handCards{padding-bottom:calc(var(--hw,80px)*.06) !important;}
+body.mobile #handCards .cardWrap{transform:translateY(var(--y,0px)) rotate(var(--r,0deg)) !important;transform-origin:50% 115%;transition:transform .18s ease-out;}
+body.mobile #handCards .cardWrap:has(.selected){transform:translateY(-16%) rotate(0deg) scale(1.12) !important;z-index:20;}
+body.mobile #handCards .cardWrap:active{transform:translateY(-8%) rotate(0deg) scale(1.06) !important;z-index:19;}
+@media (orientation:landscape){
+  body.mobile #mPlane{transform:rotateX(14deg);}
+  body.mobile.boardLarge #mPlane{transform:rotateX(6deg);}
+}
+@media (orientation:portrait){ body.mobile:not(.boardLarge) #mPlane{transform:rotateX(18deg);} }
+
+/* ===================== DESKTOP ===================== */
+body:not(.mobile) #battlefield{background:radial-gradient(80% 55% at 50% 22%,rgba(70,90,170,.14),transparent 70%),
+    radial-gradient(80% 55% at 50% 80%,rgba(150,80,190,.16),transparent 70%),rgba(8,7,20,.3) !important;border-color:rgba(214,196,150,.16) !important;}
+body:not(.mobile) #realmZoneWrap{position:relative;}
+body:not(.mobile) #realmZoneWrap::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,215,107,.5) 25%,rgba(255,215,107,.5) 75%,transparent);z-index:-1;}
+body:not(.mobile) .phaseStep.active{box-shadow:0 0 16px rgba(255,215,107,.6);}
+@media (prefers-reduced-motion:reduce){
+  .colBox.placeable,.colBox.targetable,#nextPhaseBtn,.boardHeader .pname .active-tag{animation:none !important;}
+}
+</style>
 
 </head>
 <body>
@@ -3060,6 +3203,7 @@ function renderBoard(playerIdx, mirrored, domId){
   const p = state.players[playerIdx];
   const isCurrent = playerIdx===state.current;
   const phase = PHASES[state.phaseIdx];
+  const hostEl = document.getElementById(domId); if(hostEl) hostEl.classList.toggle('activeSide', isCurrent); // Arena skin: lights up whose side it is
 
   // Economy-teaching visual cue: a one-render flash on the essence badge the moment essence is spent
   // (see flashEssenceSpend()) — consumed and cleared here so it only ever plays once per spend.
@@ -3084,7 +3228,7 @@ function renderBoard(playerIdx, mirrored, domId){
   for(let i=0;i<5;i++){
     const v = p.front[i];
     const col = p.columns[i];
-    let boxCls='colBox'; let overlay='';
+    let boxCls='colBox'+(col.colour?' devoted dev-'+col.colour:'')+(v?'':' isEmpty'); let overlay=''; // devoted/isEmpty: styling hooks only
     const onclick = `zoneClick(${playerIdx},${i})`;
 
     if(isMainPhase(phase) && isCurrent && selectedCard && selectedCard.type==='Vessel'){
@@ -4203,7 +4347,8 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   // middle of the mat: devotion chip, phase banner, next/skip
   var chip=el('button','mDevChip'); chip.hidden=true;
   var phaseLabel=el('div','mPhaseLabel');
-  mid.appendChild(chip); mid.appendChild(phaseLabel);
+  var phaseWrap=el('div','mPhaseWrap'), pips=el('div','mPhasePips'); phaseWrap.appendChild(phaseLabel); phaseWrap.appendChild(pips);
+  mid.appendChild(chip); mid.appendChild(phaseWrap);
   ['nextPhaseBtn','skipEffectBtn','skipToEndBtn','realmZoneWrap'].forEach(function(id){ mid.appendChild($(id)); });
 
   // ☰ drawer: phases, then game options
@@ -4221,7 +4366,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
     document.body.classList.toggle('boardLarge',large);
     sizeBtn.innerHTML='🔍 Board size: <b>'+(large?'Large':'Normal')+'</b>';
   }
-  var bigBoard=false; try{ bigBoard=localStorage.getItem('enscraBoardLarge')==='1'; }catch(e){}
+  var bigBoard=true; try{ bigBoard=localStorage.getItem('enscraBoardLarge')!=='0'; }catch(e){} // Large by default
   applyBoardSize(bigBoard);
   sizeBtn.onclick=function(e){ e.stopPropagation(); bigBoard=!bigBoard; applyBoardSize(bigBoard);
     try{ localStorage.setItem('enscraBoardLarge', bigBoard?'1':'0'); }catch(e){}
@@ -4266,18 +4411,22 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
     baseRender.apply(this,arguments);
     var phase=PHASES[state.phaseIdx], p=cur();
     phaseLabel.textContent=PHASE_LABELS[phase]||'';
+    pips.innerHTML=PHASES.map(function(ph,i){ return '<i class="'+(i<state.phaseIdx?'done':i===state.phaseIdx?'now':'')+'" title="'+(PHASE_LABELS[ph]||ph)+'"></i>'; }).join('');
     var rz=$('realmZoneWrap'); if(rz) rz.classList.toggle('noRealm', !state.realm);
     document.querySelectorAll('#mGame .badge.deckBadge').forEach(function(b){ var t=b.textContent.trim(); var n=(t.match(/\d+/)||[''])[0]; b.setAttribute('data-n', n+(/hand/.test(t)?' hand':'')); });
 
     // hand sizing: fit the full width, overlap only as much as needed
     var hc=$('handCards'), col=document.querySelector('#mMe .col');
-    if(hc && col){ var n=Math.max(1,hc.querySelectorAll('.cardWrap').length), avail=hand.clientWidth-10, cw=col.offsetWidth;
+    if(hc && col){ var n=Math.max(1,hc.querySelectorAll('.cardWrap').length), avail=(hand.clientWidth-10)*0.9, cw=col.offsetWidth; // 0.9: room for the fan's tilt at the edges
       var land=innerWidth>innerHeight;
       var maxW=land ? Math.max(40,(hand.clientHeight-22)*795/1144) : cw*2.0;
       var side=land && document.body.classList.contains('boardLarge'), vis=side?0.5:0.7; // hand in the side column: overlap more, bigger cards
       var hw=Math.max(40, Math.min(maxW, avail/(vis*n+(1-vis))));
       var ov=n>1 ? Math.max(hw*(1-vis), (n*hw-avail)/(n-1)) : 0;
-      hc.style.setProperty('--hw', hw+'px'); hc.style.setProperty('--ov', ov+'px'); }
+      hc.style.setProperty('--hw', hw+'px'); hc.style.setProperty('--ov', ov+'px');
+      // fan the hand: slight rotation, edges dip lower
+      var step=Math.min(side?2.5:4, (side?8:12)/Math.max(1,n-1)), midI=(n-1)/2;
+      hc.querySelectorAll('.cardWrap').forEach(function(w,i){ var o=i-midI; w.style.setProperty('--r',(o*step).toFixed(2)+'deg'); w.style.setProperty('--y',(o*o*hw*0.015).toFixed(1)+'px'); }); }
 
     // popup: shows whenever the colour picker is live and we're not waiting on a column tap
     var picker=$('devotionPicker'), pickerOn=picker && picker.style.display!=='none';
