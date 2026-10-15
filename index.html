@@ -620,6 +620,119 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 @media (max-height:600px){.mmLogo{width:110px}.mmTag{display:none}}
 @media (prefers-reduced-motion:reduce){.mmNebula,.mmStars,.mmSpin,.mmScreen{animation:none!important}}
 </style>
+<style id="mobileLayout">
+/* ===== Phone layout: one fixed screen, no scrolling (Master Duel / Snap style) =====
+   Portrait: top bar / opponent row / phase bar / your row / hand.
+   Landscape: boards + hand on the left, controls column on the right. */
+body.mobile{padding:0 !important;margin:0;height:100dvh;overflow:hidden !important;}
+body.mobile > h1, body.mobile > .sub, body.mobile #fitWrap, body.mobile #stickyHud, body.mobile #controls{display:none !important;}
+#mGame{display:none;}
+body.mobile #mGame{position:fixed;inset:0;display:grid;gap:5px;box-sizing:border-box;
+  padding:calc(4px + env(safe-area-inset-top,0px)) max(6px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));
+  --cw:calc((100vw - 12px - 20px) / 5.62);
+  grid-template-columns:100%;
+  grid-template-rows:auto minmax(0,1fr) auto auto auto minmax(0,1fr) auto;
+  grid-template-areas:"top" "." "opp" "mid" "me" "." "hand";}
+#mTop{grid-area:top;min-width:0;} #mOpp{grid-area:opp;min-width:0;} #mMid{grid-area:mid;min-width:0;} #mMe{grid-area:me;min-width:0;} #mHand{grid-area:hand;min-width:0;min-height:0;}
+
+/* top bar */
+body.mobile #status{margin:0;padding:4px 6px;border-radius:8px;gap:6px;flex-wrap:nowrap;}
+body.mobile #status .turnInfo{font-size:11px;font-weight:600;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+body.mobile #status button.small{font-size:11px;padding:4px 8px;white-space:nowrap;}
+body.mobile #status > div{gap:5px !important;flex:none;}
+
+/* boards */
+body.mobile .board{margin:0;}
+body.mobile .boardHeader{flex-wrap:nowrap;gap:6px;margin-bottom:3px;}
+body.mobile .boardHeader .pname{font-size:10px;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+body.mobile .boardHeader .pname .active-tag{font-size:9px;margin-left:4px;}
+body.mobile .badges{gap:3px;flex:none;}
+body.mobile .badge{font-size:10px;padding:1px 6px 1px 1px;gap:3px;}
+body.mobile .badgeIcon{width:14px;height:14px;font-size:8px;}
+body.mobile .badge.deckBadge{font-size:0;}
+body.mobile .badge.deckBadge .badgeIcon{font-size:8px;}
+body.mobile .badge.deckBadge::after{content:attr(data-n);font-size:10px;}
+body.mobile .row{display:grid;grid-template-columns:repeat(5,var(--cw)) calc(var(--cw)*.62);gap:4px;margin:0;padding:0;overflow:visible;justify-content:center;}
+body.mobile .col{min-width:0;flex:none;}
+body.mobile .colBox{height:auto;border-radius:6px;}
+body.mobile .vesselZone{flex:none;height:calc(var(--cw)*1144/795);padding:1px;}
+body.mobile .voidZoneBig{flex:none;height:calc(var(--cw)*1144/795);}
+body.mobile .devStrip,body.mobile .deckStrip{height:14px;font-size:8px;gap:2px;padding:0 2px;}
+body.mobile .devStripEmpty{font-size:6.5px;}
+body.mobile .colDot{width:6px;height:6px;margin-right:1px;}
+body.mobile .queuedTag{display:none;}
+body.mobile .vesselPlaceholder{font-size:7px;}
+body.mobile .zoneOverlay{font-size:7px;bottom:1px;}
+body.mobile .mzLabel{display:none;} body.mobile .mzCount{font-size:11px;}
+body.mobile .voidCountBadge{font-size:8px;padding:0 3px;}
+body.mobile .cardBackMini{width:8px !important;height:11px !important;}
+body.mobile .card .zoomBtn{display:none;}
+body.mobile .card.ecard .tag{font-size:6.5px;padding:0 3px;top:11%;right:12%;}
+body.mobile .board + div > button, body.mobile #mOpp .board ~ div button{font-size:11px;padding:4px 8px;}
+body.mobile #board-1 > div[style*="text-align:center"]{margin-top:3px !important;}
+body.mobile #board-1 > div[style*="text-align:center"] button{font-size:11px;padding:5px 10px;}
+
+/* middle bar: phase pill + next button, devotion colours, instruction */
+body.mobile #mMid{display:flex;flex-wrap:wrap;align-items:center;gap:5px;}
+body.mobile #phaseStepsList{display:flex;flex:1;min-width:0;gap:0;}
+body.mobile .phaseStep{display:none;}
+body.mobile .phaseStep.active{display:block;flex:1;font-size:11px;padding:7px 8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+body.mobile #nextPhaseBtn,body.mobile #skipEffectBtn,body.mobile #skipToEndBtn{width:auto !important;margin:0 !important;padding:7px 12px;font-size:12px;white-space:nowrap;flex:none;}
+body.mobile #nextPhaseBtn{min-width:96px;}
+body.mobile #devotionPicker{flex-basis:100%;gap:3px !important;}
+body.mobile .devPickerLabel{display:none;}
+body.mobile #devColourBtns{flex-direction:row !important;gap:5px;}
+body.mobile #devColourBtns button{flex:1;padding:7px 4px;font-size:12px;}
+body.mobile #devColourBtns .devPickerDone{flex:1;font-size:11px;padding:3px 0;}
+body.mobile #bigInstruction{flex-basis:100%;margin:0;padding:5px 9px 0;font-size:11.5px;line-height:1.35;max-height:calc(2.7em + 6px);box-sizing:border-box;border-width:1.5px;border-radius:8px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;}
+body.mobile #bigInstruction.expanded{-webkit-line-clamp:unset;display:block;max-height:none;}
+body.mobile #realmZoneWrap{flex-basis:100%;margin:0;}
+body.mobile #realmZoneWrap.noRealm{display:none;}
+body.mobile #realmZone{width:100%;min-width:0;font-size:10px;padding:3px 8px;}
+
+/* hand: fanned + overlapping along the bottom */
+body.mobile #handWrap{margin:0;height:100%;box-sizing:border-box;padding:2px 0 4px;border:none;background:transparent !important;backdrop-filter:none;-webkit-backdrop-filter:none;display:flex;flex-direction:column;}
+body.mobile #handRow{flex:1;min-height:0;display:flex;flex-direction:column;gap:0;}
+body.mobile #handLeft{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;}
+body.mobile .handHeader{margin:0 0 2px;}
+body.mobile #handWrap h3{text-align:center;color:#8f88a8;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+body.mobile #deckDisplayBig{display:none !important;}
+body.mobile #handCards{flex:none;min-height:0 !important;padding:14px 0 2px;flex-wrap:nowrap;justify-content:center;align-items:flex-end;gap:0;overflow:visible;--ov:0px;}
+body.mobile #handCards .cardWrap{width:var(--hw,80px) !important;height:calc(var(--hw,80px)*1144/795) !important;flex:none;}
+body.mobile #handCards .cardWrap + .cardWrap{margin-left:calc(-1 * var(--ov));}
+body.mobile #handCards .cardWrap:has(.selected){transform:translateY(-12px) scale(1.06) !important;z-index:20;}
+body.mobile #handCards .cardWrap{transform:none !important;}
+
+/* log as a pull-up panel; decision prompts as a bottom sheet */
+body.mobile #log{display:none;position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));height:45dvh;z-index:120;font-size:11px;
+  box-shadow:0 -6px 30px rgba(0,0,0,.7);border-color:#c4a87088;}
+body.mobile.showLog #log{display:block;}
+body.mobile #deflectPrompt,body.mobile #riteOfferPrompt,body.mobile #phaseWarningPrompt{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:110;margin:0;font-size:12.5px;box-shadow:0 -6px 30px rgba(0,0,0,.75);}
+body.mobile #deflectPrompt button,body.mobile #riteOfferPrompt button,body.mobile #phaseWarningPrompt button{padding:9px 12px;}
+body.mobile #turnGuideTip{width:min(300px,calc(100vw - 16px));}
+
+/* landscape: boards + hand left, controls right */
+@media (orientation:landscape){
+  body.mobile #mGame{
+    --cw:min(calc((100dvh - 205px) / 2 * 795 / 1144), calc((100vw - 250px) / 5.9));
+    grid-template-columns:minmax(0,1fr) minmax(190px,28vw);
+    grid-template-rows:auto auto auto minmax(0,1fr);
+    grid-template-areas:"opp top" "opp mid" "me mid" "hand mid";}
+  body.mobile #mMid{flex-direction:column;flex-wrap:nowrap;align-items:stretch;align-self:stretch;overflow-y:auto;}
+  body.mobile #phaseStepsList{flex:none;}
+  body.mobile #nextPhaseBtn{width:100% !important;}
+  body.mobile #bigInstruction{-webkit-line-clamp:6;max-height:calc(8.1em + 6px);flex:none;}
+  body.mobile #devotionPicker{flex:none;}
+  body.mobile #devColourBtns{flex-direction:column !important;}
+  body.mobile #status{padding:3px 5px;}
+  body.mobile #status .turnInfo{display:none;}
+  body.mobile #status > div{width:100%;justify-content:space-between;}
+  body.mobile #status button.small{flex:1;padding:4px 4px;font-size:10.5px;}
+  body.mobile #handCards{padding-top:4px;}
+  body.mobile #handWrap h3{display:none;}
+}
+</style>
 </head>
 <body>
 <div id="enscraIntro" aria-hidden="true">
@@ -3412,6 +3525,7 @@ function render(){
 const FIT_MIN_SCALE = 0.55; // below this, text/cards get hard to read — allow scrolling for the rest instead
 const MOBILE_BREAKPOINT = 700; // matches the @media (max-width:700px) rule — below this the CSS restacks the layout instead of us scaling it
 function fitToViewport(){
+  if(document.body && document.body.classList.contains('mobile')){ const w=document.getElementById('fitWrap'); if(w) w.style.transform='none'; return; }
   const wrap = document.getElementById('fitWrap');
   const hud = document.getElementById('stickyHud');
   if(!wrap || typeof window.innerHeight!=='number' || typeof wrap.scrollHeight!=='number') return; // not a real browser (e.g. test harness) — skip safely
@@ -4019,6 +4133,51 @@ startTurn();
 </script>
 <script>
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+</script>
+<script>
+// Phone layout: rebuild the page into one fixed game screen (see #mobileLayout styles).
+(function(){
+  var coarse = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || navigator.maxTouchPoints>0;
+  var small = Math.min(window.innerWidth, window.innerHeight) <= 600;
+  if(!(coarse && small) && !/[?&]mobile/.test(location.search)) return;
+  var $=function(id){return document.getElementById(id);};
+  var g=document.createElement('div'); g.id='mGame';
+  ['mTop','mOpp','mMid','mMe','mHand'].forEach(function(id){ var d=document.createElement('div'); d.id=id; g.appendChild(d); });
+  document.body.appendChild(g);
+  $('mTop').appendChild($('status'));
+  $('mOpp').appendChild($('board-1'));
+  $('mMe').appendChild($('board-0'));
+  $('mHand').appendChild($('handWrap'));
+  ['phaseStepsList','nextPhaseBtn','skipEffectBtn','skipToEndBtn','devotionPicker','bigInstruction','realmZoneWrap'].forEach(function(id){ $('mMid').appendChild($(id)); });
+  ['log','deflectPrompt','riteOfferPrompt','phaseWarningPrompt'].forEach(function(id){ document.body.appendChild($(id)); });
+  // Log button in the top bar (log becomes a pull-up panel)
+  var lb=document.createElement('button'); lb.className='small'; lb.textContent='Log';
+  lb.onclick=function(e){ e.stopPropagation(); document.body.classList.toggle('showLog'); };
+  $('status').lastElementChild.insertBefore(lb, $('status').lastElementChild.firstChild);
+  document.addEventListener('click',function(e){ if(document.body.classList.contains('showLog') && !$('log').contains(e.target) && e.target!==lb) document.body.classList.remove('showLog'); });
+  // shorter top-bar labels
+  $('economyHelpBtn').textContent='❓ Help';
+  $('status').lastElementChild.lastElementChild.textContent='Menu';
+  // instruction text: two lines, tap to expand
+  $('bigInstruction').addEventListener('click',function(){ this.classList.toggle('expanded'); });
+  document.body.classList.add('mobile');
+  // after every render: hide the realm strip when no Realm is active, short deck/hand counts
+  var baseRender=render;
+  render=function(){
+    baseRender.apply(this,arguments);
+    var rz=$('realmZoneWrap'); if(rz) rz.classList.toggle('noRealm', !state.realm);
+    var hc=$('handCards'), col=document.querySelector('#mMe .col'), mh=$('mHand');
+    if(hc && col && mh){ var n=Math.max(1,hc.querySelectorAll('.cardWrap').length), avail=hc.clientWidth-10, cw=col.offsetWidth;
+      var land=innerWidth>innerHeight;
+      var maxW=land ? (mh.clientHeight-22)*795/1144 : cw*2.0;
+      var hw=Math.max(40, Math.min(maxW, avail/(0.7*n+0.3)));
+      var ov=n>1 ? Math.max(hw*0.3, (n*hw-avail)/(n-1)) : 0;
+      hc.style.setProperty('--hw', hw+'px'); hc.style.setProperty('--ov', ov+'px'); }
+    document.querySelectorAll('#mGame .badge.deckBadge').forEach(function(b){ var t=b.textContent.trim(); var n=(t.match(/\d+/)||[''])[0]; b.setAttribute('data-n', n+(/hand/.test(t)?' hand':'')); });
+  };
+  render();
+  window.addEventListener('resize',function(){ setTimeout(render,150); });
+})();
 </script>
 </body>
 </html>
