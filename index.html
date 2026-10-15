@@ -573,6 +573,50 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 </style>
 </head>
 <body>
+<div id="enscraIntro" aria-hidden="true">
+<style>
+#enscraIntro{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 50%,#28194f 0%,#130d2a 35%,#07060f 70%);animation:eiBg .55s ease-in 1.75s forwards;cursor:pointer;}
+#enscraIntro::before{content:"";position:absolute;inset:0;opacity:.8;
+  background-image:radial-gradient(1.5px 1.5px at 12% 18%,#dcd7ff,transparent),radial-gradient(1px 1px at 78% 12%,#dcd7ff,transparent),
+  radial-gradient(1.5px 1.5px at 33% 72%,#dcd7ff,transparent),radial-gradient(1px 1px at 88% 64%,#dcd7ff,transparent),
+  radial-gradient(1px 1px at 55% 35%,#dcd7ff,transparent),radial-gradient(1.5px 1.5px at 20% 88%,#dcd7ff,transparent),
+  radial-gradient(1px 1px at 66% 90%,#dcd7ff,transparent),radial-gradient(1px 1px at 8% 50%,#dcd7ff,transparent),
+  radial-gradient(1.5px 1.5px at 92% 34%,#dcd7ff,transparent),radial-gradient(1px 1px at 45% 8%,#dcd7ff,transparent);}
+#enscraIntro svg{width:min(70vmin,420px);height:auto;overflow:visible;position:relative;animation:eiZoom .65s cubic-bezier(.55,0,.85,.35) 1.6s forwards;}
+#eiSpin{transform-origin:256px 256px;animation:eiSpin 1.05s cubic-bezier(.65,0,.35,1) .3s both;}
+.eiGem{transform-box:fill-box;transform-origin:center;animation:eiPop .45s ease-out both;}
+#eiRing{animation:eiRing .5s ease-out 1.15s both;}
+#eiE{animation:eiFlare .6s ease-out 1.05s both;}
+@keyframes eiSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes eiPop{0%{transform:scale(1)}40%{transform:scale(1.35);filter:brightness(1.6)}100%{transform:scale(1)}}
+@keyframes eiRing{0%{stroke-width:7}45%{stroke-width:13;filter:drop-shadow(0 0 14px #ffd76b)}100%{stroke-width:7}}
+@keyframes eiFlare{0%{filter:none}45%{filter:drop-shadow(0 0 18px #ffd76b) brightness(1.35)}100%{filter:drop-shadow(0 0 6px #ffd76b88)}}
+@keyframes eiZoom{to{transform:scale(7);opacity:0}}
+@keyframes eiBg{to{opacity:0}}
+@media (prefers-reduced-motion:reduce){#enscraIntro,#enscraIntro *{animation:none!important}#enscraIntro{transition:opacity .4s}}
+</style>
+<svg viewBox="0 0 512 512">
+  <g id="eiSpin">
+    <circle id="eiRing" cx="256" cy="256" r="184.3" fill="none" stroke="#ffd76b" stroke-width="7"/>
+    <circle class="eiGem" style="animation-delay:0.35s" cx="256.0" cy="71.7" r="28" fill="#e0473a" stroke="#fff0c8" stroke-width="4"/><circle class="eiGem" style="animation-delay:0.41s" cx="431.3" cy="199.0" r="28" fill="#3fae5f" stroke="#fff0c8" stroke-width="4"/><circle class="eiGem" style="animation-delay:0.47s" cx="364.3" cy="405.1" r="28" fill="#3f8ce0" stroke="#fff0c8" stroke-width="4"/><circle class="eiGem" style="animation-delay:0.53s" cx="147.7" cy="405.1" r="28" fill="#e6e6e6" stroke="#fff0c8" stroke-width="4"/><circle class="eiGem" style="animation-delay:0.59s" cx="80.7" cy="199.0" r="28" fill="#9a5be0" stroke="#fff0c8" stroke-width="4"/>
+  </g>
+  <text id="eiE" x="256" y="262" text-anchor="middle" dominant-baseline="middle" font-family="Georgia,'DejaVu Serif','Times New Roman',serif" font-weight="700" font-size="200" fill="#ffd76b">E</text>
+</svg>
+</div>
+<script>
+(function(){
+  var el=document.getElementById('enscraIntro');
+  var isApp=window.matchMedia&&(matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches);
+  if(!isApp){el.remove();return;}
+  var done=false;
+  function finish(){if(done)return;done=true;el.style.transition='opacity .25s';el.style.opacity='0';setTimeout(function(){el.remove();},260);}
+  el.addEventListener('click',finish);
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(finish,reduce?700:2350);
+})();
+</script>
+
 
 <h1>ENSCRA — Core Loop Prototype</h1>
 <div class="sub">Hotseat 2-player · deck, draw, devotion, attunement, combat — Rites/Realms/keywords come in a later pass</div>
