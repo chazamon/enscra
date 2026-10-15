@@ -621,25 +621,31 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 @media (prefers-reduced-motion:reduce){.mmNebula,.mmStars,.mmSpin,.mmScreen{animation:none!important}}
 </style>
 <style id="mobileLayout">
-/* ===== Phone layout: one fixed screen, no scrolling (Master Duel / Snap style) =====
-   Portrait: top bar / opponent row / phase bar / your row / hand.
-   Landscape: boards + hand on the left, controls column on the right. */
+/* ===== Phone layout: one fixed screen, Duel Links style tilted duel mat =====
+   Portrait: top bar / [space] / duel mat (opponent row, phase banner, your row) / instruction / [space] / hand.
+   Landscape: mat + hand on the left, top bar + instruction on the right. */
 body.mobile{padding:0 !important;margin:0;height:100dvh;overflow:hidden !important;}
 body.mobile > h1, body.mobile > .sub, body.mobile #fitWrap, body.mobile #stickyHud, body.mobile #controls{display:none !important;}
-#mGame{display:none;}
-body.mobile #mGame{position:fixed;inset:0;display:grid;gap:5px;box-sizing:border-box;
+#mGame,#mDrawer,#mDrawerBg,#devPopup{display:none;}
+body.mobile #mGame{position:fixed;inset:0;display:grid;gap:6px;box-sizing:border-box;
   padding:calc(4px + env(safe-area-inset-top,0px)) max(6px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));
-  --cw:calc((100vw - 12px - 20px) / 5.62);
+  --cw:calc((100vw - 12px - 14px - 20px) / 5.62);
   grid-template-columns:100%;
-  grid-template-rows:auto minmax(0,1fr) auto auto auto minmax(0,1fr) auto;
-  grid-template-areas:"top" "." "opp" "mid" "me" "." "hand";}
-#mTop{grid-area:top;min-width:0;} #mOpp{grid-area:opp;min-width:0;} #mMid{grid-area:mid;min-width:0;} #mMe{grid-area:me;min-width:0;} #mHand{grid-area:hand;min-width:0;min-height:0;}
+  grid-template-rows:auto minmax(0,1fr) auto auto minmax(0,1fr) auto;
+  grid-template-areas:"top" "." "field" "info" "." "hand";}
+#mTop{grid-area:top;min-width:0;} #mField{grid-area:field;min-width:0;} #mInfo{grid-area:info;min-width:0;} #mHand{grid-area:hand;min-width:0;min-height:0;}
 
-/* top bar */
-body.mobile #status{margin:0;padding:4px 6px;border-radius:8px;gap:6px;flex-wrap:nowrap;}
-body.mobile #status .turnInfo{font-size:11px;font-weight:600;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-body.mobile #status button.small{font-size:11px;padding:4px 8px;white-space:nowrap;}
-body.mobile #status > div{gap:5px !important;flex:none;}
+/* top bar: hamburger + whose turn */
+body.mobile #mTop{display:flex;align-items:center;gap:8px;}
+#mMenuBtn{flex:none;width:38px;height:34px;border-radius:9px;padding:0;font-size:19px;line-height:1;background:rgba(16,15,34,.8);border:1px solid #c4a87055;color:#ffd76b;}
+body.mobile #turnInfo{flex:1;min-width:0;font-size:12px;font-weight:600;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* the duel mat */
+body.mobile #mField{perspective:1150px;perspective-origin:50% 0%;}
+#mPlane{transform:rotateX(24deg);transform-origin:50% 100%;padding:7px 7px 8px;border-radius:16px;display:flex;flex-direction:column;gap:5px;position:relative;
+  background:radial-gradient(120% 70% at 50% 50%,rgba(70,48,150,.38),rgba(12,10,30,.82) 70%);
+  border:1px solid rgba(196,168,112,.35);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 18px 40px rgba(0,0,0,.55),inset 0 0 40px rgba(90,63,217,.25);}
+#mPlane::before{content:"";position:absolute;left:4%;right:4%;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,107,.35),transparent);pointer-events:none;}
 
 /* boards */
 body.mobile .board{margin:0;}
@@ -647,7 +653,7 @@ body.mobile .boardHeader{flex-wrap:nowrap;gap:6px;margin-bottom:3px;}
 body.mobile .boardHeader .pname{font-size:10px;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 body.mobile .boardHeader .pname .active-tag{font-size:9px;margin-left:4px;}
 body.mobile .badges{gap:3px;flex:none;}
-body.mobile .badge{font-size:10px;padding:1px 6px 1px 1px;gap:3px;}
+body.mobile .badge{font-size:10px;padding:1px 6px 1px 1px;gap:3px;background:rgba(0,0,0,.45);}
 body.mobile .badgeIcon{width:14px;height:14px;font-size:8px;}
 body.mobile .badge.deckBadge{font-size:0;}
 body.mobile .badge.deckBadge .badgeIcon{font-size:8px;}
@@ -657,7 +663,7 @@ body.mobile .col{min-width:0;flex:none;}
 body.mobile .colBox{height:auto;border-radius:6px;}
 body.mobile .vesselZone{flex:none;height:calc(var(--cw)*1144/795);padding:1px;}
 body.mobile .voidZoneBig{flex:none;height:calc(var(--cw)*1144/795);}
-body.mobile .devStrip,body.mobile .deckStrip{height:14px;font-size:8px;gap:2px;padding:0 2px;}
+body.mobile .devStrip,body.mobile .deckStrip{height:14px;font-size:8px;gap:2px;padding:0 2px;white-space:nowrap;overflow:hidden;}
 body.mobile .devStripEmpty{font-size:6.5px;}
 body.mobile .colDot{width:6px;height:6px;margin-right:1px;}
 body.mobile .queuedTag{display:none;}
@@ -668,71 +674,93 @@ body.mobile .voidCountBadge{font-size:8px;padding:0 3px;}
 body.mobile .cardBackMini{width:8px !important;height:11px !important;}
 body.mobile .card .zoomBtn{display:none;}
 body.mobile .card.ecard .tag{font-size:6.5px;padding:0 3px;top:11%;right:12%;}
-body.mobile .board + div > button, body.mobile #mOpp .board ~ div button{font-size:11px;padding:4px 8px;}
 body.mobile #board-1 > div[style*="text-align:center"]{margin-top:3px !important;}
 body.mobile #board-1 > div[style*="text-align:center"] button{font-size:11px;padding:5px 10px;}
 
-/* middle bar: phase pill + next button, devotion colours, instruction */
-body.mobile #mMid{display:flex;flex-wrap:wrap;align-items:center;gap:5px;}
-body.mobile #phaseStepsList{display:flex;flex:1;min-width:0;gap:0;}
-body.mobile .phaseStep{display:none;}
-body.mobile .phaseStep.active{display:block;flex:1;font-size:11px;padding:7px 8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-body.mobile #nextPhaseBtn,body.mobile #skipEffectBtn,body.mobile #skipToEndBtn{width:auto !important;margin:0 !important;padding:7px 12px;font-size:12px;white-space:nowrap;flex:none;}
-body.mobile #nextPhaseBtn{min-width:96px;}
-body.mobile #devotionPicker{flex-basis:100%;gap:3px !important;}
-body.mobile .devPickerLabel{display:none;}
-body.mobile #devColourBtns{flex-direction:row !important;gap:5px;}
-body.mobile #devColourBtns button{flex:1;padding:7px 4px;font-size:12px;}
-body.mobile #devColourBtns .devPickerDone{flex:1;font-size:11px;padding:3px 0;}
-body.mobile #bigInstruction{flex-basis:100%;margin:0;padding:5px 9px 0;font-size:11.5px;line-height:1.35;max-height:calc(2.7em + 6px);box-sizing:border-box;border-width:1.5px;border-radius:8px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;}
-body.mobile #bigInstruction.expanded{-webkit-line-clamp:unset;display:block;max-height:none;}
+/* phase banner across the middle of the mat */
+body.mobile #mMid{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+#mPhaseLabel{flex:1;min-width:0;text-align:center;font-family:'Cinzel',Georgia,serif;font-weight:800;font-size:13px;letter-spacing:.14em;color:#ffd76b;text-transform:uppercase;
+  text-shadow:0 0 10px #ffd76b66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:linear-gradient(90deg,transparent,rgba(255,215,107,.14) 30%,rgba(255,215,107,.14) 70%,transparent);padding:5px 0;}
+body.mobile #nextPhaseBtn,body.mobile #skipEffectBtn,body.mobile #skipToEndBtn{width:auto !important;margin:0 !important;padding:6px 11px;font-size:12px;white-space:nowrap;flex:none;}
+#mDevChip{flex:none;padding:6px 10px;font-size:11.5px;border-radius:999px;background:#2a1f55;border:1px solid #ffd76b88;color:#ffd76b;white-space:nowrap;}
+#mDevChip[hidden]{display:none;}
 body.mobile #realmZoneWrap{flex-basis:100%;margin:0;}
 body.mobile #realmZoneWrap.noRealm{display:none;}
 body.mobile #realmZone{width:100%;min-width:0;font-size:10px;padding:3px 8px;}
 
-/* hand: fanned + overlapping along the bottom */
+/* instruction line under the mat */
+body.mobile #bigInstruction{margin:0;padding:5px 9px 0;font-size:11.5px;line-height:1.35;max-height:calc(2.7em + 6px);box-sizing:border-box;border-width:1.5px;border-radius:8px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;}
+body.mobile #bigInstruction.expanded{-webkit-line-clamp:unset;display:block;max-height:none;}
+
+/* hand */
 body.mobile #handWrap{margin:0;height:100%;box-sizing:border-box;padding:2px 0 4px;border:none;background:transparent !important;backdrop-filter:none;-webkit-backdrop-filter:none;display:flex;flex-direction:column;}
-body.mobile #handRow{flex:1;min-height:0;display:flex;flex-direction:column;gap:0;}
-body.mobile #handLeft{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;}
-body.mobile .handHeader{margin:0 0 2px;}
+body.mobile #handRow{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch !important;gap:0;width:100%;}
+body.mobile #handLeft{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;justify-content:flex-end;}
+body.mobile .handHeader{margin:0 0 2px;justify-content:center;}
 body.mobile #handWrap h3{text-align:center;color:#8f88a8;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 body.mobile #deckDisplayBig{display:none !important;}
-body.mobile #handCards{flex:none;min-height:0 !important;padding:14px 0 2px;flex-wrap:nowrap;justify-content:center;align-items:flex-end;gap:0;overflow:visible;--ov:0px;}
-body.mobile #handCards .cardWrap{width:var(--hw,80px) !important;height:calc(var(--hw,80px)*1144/795) !important;flex:none;}
+body.mobile #handCards{flex:none;width:100%;min-height:0 !important;padding:14px 0 2px;flex-wrap:nowrap;justify-content:center;align-items:flex-end;gap:0;overflow:visible;--ov:0px;}
+body.mobile #handCards .cardWrap{width:var(--hw,80px) !important;height:calc(var(--hw,80px)*1144/795) !important;flex:none;transform:none !important;}
 body.mobile #handCards .cardWrap + .cardWrap{margin-left:calc(-1 * var(--ov));}
 body.mobile #handCards .cardWrap:has(.selected){transform:translateY(-12px) scale(1.06) !important;z-index:20;}
-body.mobile #handCards .cardWrap{transform:none !important;}
+
+/* ☰ drawer: phases + game options */
+body.mobile #mDrawerBg{display:block;position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s;}
+body.mobile #mDrawer{display:flex;flex-direction:column;gap:8px;position:fixed;top:0;bottom:0;left:0;z-index:141;width:min(270px,80vw);box-sizing:border-box;overflow-y:auto;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,#171332,#0b0a18);border-right:1px solid #c4a87055;box-shadow:8px 0 30px rgba(0,0,0,.6);transform:translateX(-105%);transition:transform .22s ease-out;}
+body.mobile.drawerOpen #mDrawer{transform:none;} body.mobile.drawerOpen #mDrawerBg{opacity:1;pointer-events:auto;}
+#mDrawer h4{margin:6px 0 0;font-family:'Cinzel',Georgia,serif;font-size:12px;letter-spacing:.14em;color:#b8aee0;text-transform:uppercase;}
+body.mobile #mDrawer #phaseStepsList{display:flex;flex-direction:column;gap:5px;}
+body.mobile #mDrawer .phaseStep{display:block;font-size:11px;padding:7px 9px;}
+#mDrawerBtns{display:flex;flex-direction:column;gap:6px;}
+#mDrawerBtns button{width:100%;text-align:left;padding:10px 12px;font-size:13px;}
+
+/* devotion / colour-pick popup */
+body.mobile #devPopup{display:flex;position:fixed;inset:0;z-index:130;align-items:center;justify-content:center;padding:0 18px 12vh;background:rgba(5,4,12,.5);
+  opacity:0;pointer-events:none;transition:opacity .18s;}
+body.mobile #devPopup.open{opacity:1;pointer-events:auto;}
+.dpCard{width:100%;max-width:340px;background:linear-gradient(160deg,#211a46,#0e0c20);border:1.5px solid #ffd76b99;border-radius:16px;padding:16px;box-sizing:border-box;
+  box-shadow:0 0 0 1px #000,0 0 30px #ffd76b33,0 20px 50px rgba(0,0,0,.7);display:flex;flex-direction:column;gap:10px;transform:scale(.92);transition:transform .2s ease-out;}
+#devPopup.open .dpCard{transform:none;}
+.dpTitle{font-family:'Cinzel',Georgia,serif;font-weight:800;font-size:20px;letter-spacing:.12em;color:#ffd76b;text-align:center;text-shadow:0 0 12px #ffd76b55;}
+.dpSub{font-size:12.5px;color:#cfc9e6;text-align:center;line-height:1.4;}
+.dpPts{display:flex;justify-content:center;gap:6px;}
+.dpPts span{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e3d4ff,#5a3fd9);box-shadow:0 0 8px #8a76e8;}
+.dpPts span.used{background:#2a2840;box-shadow:none;}
+body.mobile #devPopup #devotionPicker{gap:6px !important;}
+body.mobile #devPopup .devPickerLabel{display:none;}
+body.mobile #devPopup #devColourBtns{flex-direction:column !important;gap:8px;}
+body.mobile #devPopup #devColourBtns button{padding:12px;font-size:15px;font-weight:700;border-radius:10px;}
+.dpFoot{display:flex;gap:8px;}
+.dpFoot button{flex:1;padding:10px;font-size:13px;border-radius:10px;}
+.dpFoot button[hidden]{display:none;}
 
 /* log as a pull-up panel; decision prompts as a bottom sheet */
-body.mobile #log{display:none;position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));height:45dvh;z-index:120;font-size:11px;
+body.mobile #log{display:none;position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));height:45dvh;z-index:150;font-size:11px;
   box-shadow:0 -6px 30px rgba(0,0,0,.7);border-color:#c4a87088;}
 body.mobile.showLog #log{display:block;}
 body.mobile #deflectPrompt,body.mobile #riteOfferPrompt,body.mobile #phaseWarningPrompt{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:110;margin:0;font-size:12.5px;box-shadow:0 -6px 30px rgba(0,0,0,.75);}
 body.mobile #deflectPrompt button,body.mobile #riteOfferPrompt button,body.mobile #phaseWarningPrompt button{padding:9px 12px;}
 body.mobile #turnGuideTip{width:min(300px,calc(100vw - 16px));}
 
-/* landscape: boards + hand left, controls right */
 @media (orientation:landscape){
   body.mobile #mGame{
-    --cw:min(calc((100dvh - 205px) / 2 * 795 / 1144), calc((100vw - 250px) / 5.9));
+    --cw:min(calc((100dvh - 250px) / 2 * 795 / 1144), calc((100vw - 265px) / 5.9));
     grid-template-columns:minmax(0,1fr) minmax(190px,28vw);
-    grid-template-rows:auto auto auto minmax(0,1fr);
-    grid-template-areas:"opp top" "opp mid" "me mid" "hand mid";}
-  body.mobile #mMid{flex-direction:column;flex-wrap:nowrap;align-items:stretch;align-self:stretch;overflow-y:auto;}
-  body.mobile #phaseStepsList{flex:none;}
-  body.mobile #nextPhaseBtn{width:100% !important;}
-  body.mobile #bigInstruction{-webkit-line-clamp:6;max-height:calc(8.1em + 6px);flex:none;}
-  body.mobile #devotionPicker{flex:none;}
-  body.mobile #devColourBtns{flex-direction:column !important;}
-  body.mobile #status{padding:3px 5px;}
-  body.mobile #status .turnInfo{display:none;}
-  body.mobile #status > div{width:100%;justify-content:space-between;}
-  body.mobile #status button.small{flex:1;padding:4px 4px;font-size:10.5px;}
+    grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"field top" "field info" "hand info";}
+  #mPlane{transform:rotateX(16deg);}
+  body.mobile #mInfo{align-self:start;}
+  body.mobile #bigInstruction{-webkit-line-clamp:7;max-height:calc(9.45em + 6px);}
   body.mobile #handCards{padding-top:4px;}
   body.mobile #handWrap h3{display:none;}
 }
+@media (prefers-reduced-motion:reduce){ body.mobile #mDrawer, .dpCard, body.mobile #devPopup{transition:none;} }
 </style>
+
 </head>
 <body>
 <div id="enscraIntro" aria-hidden="true">
@@ -4141,43 +4169,118 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   var small = Math.min(window.innerWidth, window.innerHeight) <= 600;
   if(!(coarse && small) && !/[?&]mobile/.test(location.search)) return;
   var $=function(id){return document.getElementById(id);};
-  var g=document.createElement('div'); g.id='mGame';
-  ['mTop','mOpp','mMid','mMe','mHand'].forEach(function(id){ var d=document.createElement('div'); d.id=id; g.appendChild(d); });
+  function el(tag,id,cls,html){ var e=document.createElement(tag); if(id) e.id=id; if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
+
+  var g=el('div','mGame'); var top=el('div','mTop'), field=el('div','mField'), plane=el('div','mPlane'), info=el('div','mInfo'), hand=el('div','mHand');
+  var opp=el('div','mOpp'), mid=el('div','mMid'), me=el('div','mMe');
+  plane.appendChild(opp); plane.appendChild(mid); plane.appendChild(me); field.appendChild(plane);
+  [top,field,info,hand].forEach(function(x){ g.appendChild(x); });
   document.body.appendChild(g);
-  $('mTop').appendChild($('status'));
-  $('mOpp').appendChild($('board-1'));
-  $('mMe').appendChild($('board-0'));
-  $('mHand').appendChild($('handWrap'));
-  ['phaseStepsList','nextPhaseBtn','skipEffectBtn','skipToEndBtn','devotionPicker','bigInstruction','realmZoneWrap'].forEach(function(id){ $('mMid').appendChild($(id)); });
+
+  // top bar: ☰ + whose turn
+  var menuBtn=el('button','mMenuBtn',null,'☰'); menuBtn.setAttribute('aria-label','Menu');
+  top.appendChild(menuBtn); top.appendChild($('turnInfo'));
+
+  opp.appendChild($('board-1')); me.appendChild($('board-0'));
+  hand.appendChild($('handWrap')); info.appendChild($('bigInstruction'));
+
+  // middle of the mat: devotion chip, phase banner, next/skip
+  var chip=el('button','mDevChip'); chip.hidden=true;
+  var phaseLabel=el('div','mPhaseLabel');
+  mid.appendChild(chip); mid.appendChild(phaseLabel);
+  ['nextPhaseBtn','skipEffectBtn','skipToEndBtn','realmZoneWrap'].forEach(function(id){ mid.appendChild($(id)); });
+
+  // ☰ drawer: phases, then game options
+  var drawer=el('div','mDrawer'), bg=el('div','mDrawerBg');
+  drawer.appendChild(el('h4',null,null,'Turn phases'));
+  drawer.appendChild($('phaseStepsList'));
+  drawer.appendChild(el('h4',null,null,'Game'));
+  var btns=el('div','mDrawerBtns'); drawer.appendChild(btns);
+  var logBtn=el('button',null,null,'📜 Log');
+  logBtn.onclick=function(e){ e.stopPropagation(); closeDrawer(); document.body.classList.add('showLog'); };
+  btns.appendChild(logBtn);
+  btns.appendChild($('sfxToggleBtn'));
+  var help=$('economyHelpBtn'); help.textContent='❓ How to Play'; btns.appendChild(help);
+  var oldStatusBtns=$('status').querySelector('div');
+  var menuReturn=oldStatusBtns.lastElementChild; menuReturn.textContent='⌂ Main Menu'; btns.appendChild(menuReturn);
+  document.body.appendChild(bg); document.body.appendChild(drawer);
+  function closeDrawer(){ document.body.classList.remove('drawerOpen'); }
+  menuBtn.onclick=function(e){ e.stopPropagation(); document.body.classList.toggle('drawerOpen'); };
+  bg.onclick=closeDrawer;
+  help.addEventListener('click',closeDrawer);
+
+  // devotion / colour popup (the existing picker moves inside it)
+  var pop=el('div','devPopup'); var card=el('div',null,'dpCard');
+  var title=el('div',null,'dpTitle'), sub=el('div',null,'dpSub'), pts=el('div',null,'dpPts');
+  var foot=el('div',null,'dpFoot'), viewBtn=el('button',null,null,'View board'), doneBtn=el('button',null,'primary','Done →'), cancelBtn=el('button',null,null,'Cancel');
+  foot.appendChild(viewBtn); foot.appendChild(cancelBtn); foot.appendChild(doneBtn);
+  card.appendChild(title); card.appendChild(pts); card.appendChild(sub); card.appendChild($('devotionPicker')); card.appendChild(foot);
+  pop.appendChild(card); document.body.appendChild(pop);
+  var dismissedKey=null;
+  function popKey(){ return state.current+'-'+(cur().turnCount)+'-'+state.phaseIdx; }
+  viewBtn.onclick=function(){ dismissedKey=popKey(); render(); };
+  doneBtn.onclick=function(){ playSfx('phase'); dismissedKey=popKey(); requestNextPhase(); };
+  cancelBtn.onclick=function(){ state.selectedCardId=null; state.reattuneStaging=null; render(); };
+  chip.onclick=function(){
+    if(state.selectedAttuneColour){ state.selectedAttuneColour=null; }
+    else if(state.reattuneStaging){ state.reattuneStaging=null; }
+    else { dismissedKey=null; }
+    render();
+  };
+
   ['log','deflectPrompt','riteOfferPrompt','phaseWarningPrompt'].forEach(function(id){ document.body.appendChild($(id)); });
-  // Log button in the top bar (log becomes a pull-up panel)
-  var lb=document.createElement('button'); lb.className='small'; lb.textContent='Log';
-  lb.onclick=function(e){ e.stopPropagation(); document.body.classList.toggle('showLog'); };
-  $('status').lastElementChild.insertBefore(lb, $('status').lastElementChild.firstChild);
-  document.addEventListener('click',function(e){ if(document.body.classList.contains('showLog') && !$('log').contains(e.target) && e.target!==lb) document.body.classList.remove('showLog'); });
-  // shorter top-bar labels
-  $('economyHelpBtn').textContent='❓ Help';
-  $('status').lastElementChild.lastElementChild.textContent='Menu';
-  // instruction text: two lines, tap to expand
+  document.addEventListener('click',function(e){ if(document.body.classList.contains('showLog') && !$('log').contains(e.target) && e.target!==logBtn) document.body.classList.remove('showLog'); });
   $('bigInstruction').addEventListener('click',function(){ this.classList.toggle('expanded'); });
   document.body.classList.add('mobile');
-  // after every render: hide the realm strip when no Realm is active, short deck/hand counts
+
   var baseRender=render;
   render=function(){
     baseRender.apply(this,arguments);
+    var phase=PHASES[state.phaseIdx], p=cur();
+    phaseLabel.textContent=PHASE_LABELS[phase]||'';
     var rz=$('realmZoneWrap'); if(rz) rz.classList.toggle('noRealm', !state.realm);
-    var hc=$('handCards'), col=document.querySelector('#mMe .col'), mh=$('mHand');
-    if(hc && col && mh){ var n=Math.max(1,hc.querySelectorAll('.cardWrap').length), avail=hc.clientWidth-10, cw=col.offsetWidth;
+    document.querySelectorAll('#mGame .badge.deckBadge').forEach(function(b){ var t=b.textContent.trim(); var n=(t.match(/\d+/)||[''])[0]; b.setAttribute('data-n', n+(/hand/.test(t)?' hand':'')); });
+
+    // hand sizing: fit the full width, overlap only as much as needed
+    var hc=$('handCards'), col=document.querySelector('#mMe .col');
+    if(hc && col){ var n=Math.max(1,hc.querySelectorAll('.cardWrap').length), avail=hand.clientWidth-10, cw=col.offsetWidth;
       var land=innerWidth>innerHeight;
-      var maxW=land ? (mh.clientHeight-22)*795/1144 : cw*2.0;
+      var maxW=land ? Math.max(40,(hand.clientHeight-22)*795/1144) : cw*2.0;
       var hw=Math.max(40, Math.min(maxW, avail/(0.7*n+0.3)));
       var ov=n>1 ? Math.max(hw*0.3, (n*hw-avail)/(n-1)) : 0;
       hc.style.setProperty('--hw', hw+'px'); hc.style.setProperty('--ov', ov+'px'); }
-    document.querySelectorAll('#mGame .badge.deckBadge').forEach(function(b){ var t=b.textContent.trim(); var n=(t.match(/\d+/)||[''])[0]; b.setAttribute('data-n', n+(/hand/.test(t)?' hand':'')); });
+
+    // popup: shows whenever the colour picker is live and we're not waiting on a column tap
+    var picker=$('devotionPicker'), pickerOn=picker && picker.style.display!=='none';
+    var isDev = phase==='Devotion';
+    var waitingCol = (isDev && state.selectedAttuneColour) || !!state.reattuneStaging;
+    var lobbyUp = !$('lobbyOverlay').classList.contains('hidden');
+    var key=popKey();
+    var show = pickerOn && !waitingCol && dismissedKey!==key && !lobbyUp && !state.gameOver && !(isDev && p.devotion<=0);
+    if(isDev){
+      title.textContent='Devotion';
+      var left=p.devotion, tot=p.devotionTotal;
+      pts.innerHTML=''; for(var i=0;i<tot;i++){ var d=document.createElement('span'); if(i>=left) d.className='used'; pts.appendChild(d); }
+      pts.hidden=false;
+      sub.textContent=left+' point'+(left===1?'':'s')+' to spend. Pick a colour, then tap one of your columns.';
+      doneBtn.hidden=false; viewBtn.hidden=false; cancelBtn.hidden=true;
+    } else {
+      title.textContent='Pick a colour'; pts.hidden=true;
+      sub.textContent='Choose the new colour, then tap the column to change.';
+      doneBtn.hidden=true; viewBtn.hidden=true; cancelBtn.hidden=!(state.selectedCardId!=null);
+    }
+    pop.classList.toggle('open', !!show);
+
+    // chip in the middle of the mat
+    var myTurn=isMyActionableTurn();
+    if(waitingCol && myTurn){ chip.hidden=false; chip.textContent=(state.selectedAttuneColour||state.reattuneStaging.colour)+' · tap a column ✕'; }
+    else if(isDev && myTurn && dismissedKey===key && p.devotion>0){ chip.hidden=false; chip.textContent='◆ Devote'; }
+    else chip.hidden=true;
   };
   render();
   window.addEventListener('resize',function(){ setTimeout(render,150); });
 })();
 </script>
+
 </body>
 </html>
