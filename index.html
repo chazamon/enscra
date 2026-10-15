@@ -4428,7 +4428,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   var zOv=$('cardZoomOverlay'), zIn=$('cardZoomInner');
   var zAct=el('div','mZoomActions'), zPlay=el('button','mZoomPlay','primary'), zBack=el('button','mZoomBack',null,'Back to hand');
   zAct.appendChild(zPlay); zAct.appendChild(zBack); zOv.appendChild(zAct);
-  var zSrc=null, zPlayFn=null, zBusy=false, lastCardEl=null;
+  var zSrc=null, zPlayFn=null, zBusy=false, lastCardEl=null, zFade=null; // zFade: the close fade, cancelled after so the buttons aren't left hidden
   document.addEventListener('pointerdown',function(e){ var c=e.target.closest&&e.target.closest('.card.ecard'); if(c && !c.closest('#cardZoomOverlay')) lastCardEl=c; },true);
   function flyRect(from,to){ return {dx:(from.left+from.width/2)-(to.left+to.width/2), dy:(from.top+from.height/2)-(to.top+to.height/2), s:from.width/Math.max(1,to.width)}; }
   var baseZoom=zoomCard, baseHide=hideCardZoom;
@@ -4448,11 +4448,11 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   hideCardZoom=function(after){
     if(zBusy) return;
     var card=zIn.querySelector('.card.ecard'), src=zSrc; zSrc=null;
-    function done(){ zBusy=false; baseHide(); zOv.classList.remove('hasPlay'); if(src) src.style.visibility=''; if(typeof after==='function') after(); }
+    function done(){ zBusy=false; if(zFade){ zFade.cancel(); zFade=null; } baseHide(); zOv.classList.remove('hasPlay'); if(src) src.style.visibility=''; if(typeof after==='function') after(); }
     if(src && src.isConnected && card && zIn.animate){
       zBusy=true;
       var f=flyRect(src.getBoundingClientRect(), card.getBoundingClientRect());
-      zAct.animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'});
+      var fade=zAct.animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'}); zFade=fade;
       zIn.animate([{transform:'none'},{transform:'translate('+f.dx+'px,'+f.dy+'px) scale('+f.s+')'}],{duration:230,easing:'cubic-bezier(.5,0,.75,.4)'}).onfinish=done;
       zOv.animate([{backgroundColor:'rgba(0,0,0,.78)'},{backgroundColor:'rgba(0,0,0,0)'}],{duration:230});
     } else done();
