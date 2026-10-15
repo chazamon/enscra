@@ -668,7 +668,7 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 
 
 <h1>ENSCRA — Core Loop Prototype</h1>
-<div class="sub">Hotseat 2-player · deck, draw, devotion, attunement, combat — Rites/Realms/keywords come in a later pass</div>
+<div class="sub">Hotseat 2-player · deck, draw, devotion, attune, combat — Rites/Realms/keywords come in a later pass</div>
 
 <div id="fitWrap">
 <div id="status">
@@ -686,7 +686,7 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
   <div id="phaseSidebar">
     <div id="phaseStepsList"></div>
     <div id="devotionPicker" style="display:none;">
-      <div class="devPickerLabel"><span id="devPickerLabelText">Attune a colour, then click a column:</span></div>
+      <div class="devPickerLabel"><span id="devPickerLabelText">Devote a colour, then click a column:</span></div>
       <div id="devColourBtns"></div>
     </div>
     <button class="primary" id="nextPhaseBtn"></button>
@@ -1079,7 +1079,7 @@ function resolvePendingEffectZoneClick(playerIdx, colIdx){
     if(!col.colour) return; // must already be attuned to something
     const oldColour = col.colour;
     col.colour = pe.selectedColour;
-    log(`${pe.sourceName}: column ${colIdx+1} reattuned from ${oldColour} to ${pe.selectedColour} (grade unchanged).`);
+    log(`${pe.sourceName}: column ${colIdx+1} changed from ${oldColour} to ${pe.selectedColour} (grade unchanged).`);
     state.pendingEffect = null; render(); return;
   }
   if(pe.kind==='redirectAttack'){
@@ -1203,7 +1203,7 @@ function castReattuneAtColumn(cardId, colIdx){
   state.selectedCardId = null;
   state.reattuneStaging = null;
   col.colour = colour;
-  log(`${p.name} casts ${card.name} (${card.colour}, ${card.cost} essence): column ${colIdx+1} reattuned from ${oldColour} to ${colour} (grade unchanged).`);
+  log(`${p.name} casts ${card.name} (${card.colour}, ${card.cost} Attune): column ${colIdx+1} changed from ${oldColour} to ${colour} (grade unchanged).`);
   if(iAmActing) net.sendAction({type:'castSpell', cardId: card.id});
   render();
   if(fromRect){
@@ -1335,13 +1335,13 @@ const TURN_GUIDE_STEPS = [
     resolve(){
       const el = document.querySelector('#devotionPicker');
       if(!el) return null;
-      return { anchor: el, text:'Pick a colour, then click one of your columns below to attune it. This is <b>Devotion</b> — it refreshes every turn and readies columns for the Vessels you want to play.' };
+      return { anchor: el, text:'Pick a colour, then click one of your columns below to devote it. This is <b>Devotion</b> — it refreshes every turn and readies columns for the Vessels you want to play.' };
     } },
   { phase:'Main1',
     resolve(){
       const el = document.querySelector('.board#board-0 .essenceBadge');
       if(!el) return null;
-      return { anchor: el, text:'<b>Essence</b> pays for actually playing a card — a Vessel costs Essence equal to its Grade, and a Rite or Realm costs the number printed on it. It never touches Devotion, and vice versa.' };
+      return { anchor: el, text:'<b>Attune</b> pays for actually playing a card — a Vessel costs Attune equal to its Grade, and a Rite or Realm costs the number printed on it. It never touches Devotion, and vice versa.' };
     } },
   { phase:'Main1',
     // Points at a real card you can actually afford right now, reading its cost/Attack/Defense off
@@ -1355,7 +1355,7 @@ const TURN_GUIDE_STEPS = [
         const el = document.getElementById('cardEl-'+playableVessel.id);
         if(el){
           return { anchor: el,
-            text:`The number top-right is <b>${playableVessel.name}</b>'s cost — pay <b>${playableVessel.grade} Essence</b> to play it, into a column already attuned to ${playableVessel.colour} Grade ${playableVessel.grade}+. The numbers at the bottom (<b>${playableVessel.atk} / ${playableVessel.def}</b>) are Attack and Defense — Attack is the damage it deals attacking, Defense is how much it can take before it dies.` };
+            text:`The number top-right is <b>${playableVessel.name}</b>'s cost — pay <b>${playableVessel.grade} Attune</b> to play it, into a column already devoted to ${playableVessel.colour} Grade ${playableVessel.grade}+. The numbers at the bottom (<b>${playableVessel.atk} / ${playableVessel.def}</b>) are Attack and Defense — Attack is the damage it deals attacking, Defense is how much it can take before it dies.` };
         }
       }
       if(!hasAnyPlayableHandCard(0)) return null; // nothing playable this turn — nothing to point at
@@ -1610,7 +1610,7 @@ function startTurn(){
     if(v.stunTurns && v.stunTurns>0){ v.stunned = true; v.stunTurns -= 1; }
     else { v.stunned = false; }
   });
-  log(`— ${p.name}'s turn ${p.turnCount} begins. Devotion: ${p.devotion}, Essence: ${p.essence} —`);
+  log(`— ${p.name}'s turn ${p.turnCount} begins. Devotion: ${p.devotion}, Attune: ${p.essence} —`);
   render();
 }
 
@@ -1793,7 +1793,7 @@ function attuneColumn(colIdx, colour, grade){
   const iAmActing = net.isOnline && net.connected && net.mySeat===state.current;
   p.devotion -= cost;
   p.columns[colIdx] = {colour, grade};
-  log(`${p.name} attunes column ${colIdx+1} to ${colour} Grade ${grade} (-${cost} devotion, ${p.devotion} left this turn).`);
+  log(`${p.name} devotes column ${colIdx+1} to ${colour} Grade ${grade} (-${cost} devotion, ${p.devotion} left this turn).`);
   flashAttune(state.current, colIdx);
   playSfx('devotion');
   if(iAmActing) net.sendAction({type:'attune', colIdx, colour, grade});
@@ -1845,7 +1845,7 @@ function placeSelected(colIdx){
   p.front[colIdx] = {...card, sick:true, riteShielded: !!mech(card.name).riteShieldOnPlay};
   p.hand = p.hand.filter(c=>c.id!==card.id);
   state.selectedCardId = null;
-  log(`${p.name} plays ${card.name} (${card.colour} G${card.grade}) to column ${colIdx+1} (-${card.grade} essence).`);
+  log(`${p.name} plays ${card.name} (${card.colour} G${card.grade}) to column ${colIdx+1} (-${card.grade} Attune).`);
   playSfx('play');
   if(iAmActing) net.sendAction({type:'place', colIdx, card});
   render();
@@ -1912,12 +1912,12 @@ function canPlayCard(playerIdx, card){
 // castSpellCard's own messaging, so nothing was logged and nothing re-rendered — it just looked broken.
 function logWhyCardCantPlay(p, card){
   if(card.type==='Vessel'){
-    if(!hasEligibleColumn(state.current, card)) log(`${card.name}: no column attuned to ${card.colour} Grade ${card.grade} (or higher) with room for it.`);
-    else if(p.essence < card.grade) log(`${card.name}: not enough essence (needs ${card.grade}, you have ${p.essence}).`);
+    if(!hasEligibleColumn(state.current, card)) log(`${card.name}: no column devoted to ${card.colour} Grade ${card.grade} (or higher) with room for it.`);
+    else if(p.essence < card.grade) log(`${card.name}: not enough Attune (needs ${card.grade}, you have ${p.essence}).`);
     else log(`${card.name} can't be played right now.`);
     return;
   }
-  if(p.essence < card.cost) log(`${card.name}: not enough essence (needs ${card.cost}, you have ${p.essence}).`);
+  if(p.essence < card.cost) log(`${card.name}: not enough Attune (needs ${card.cost}, you have ${p.essence}).`);
   else if(card.type==='Rite' && card.speed!=='Instant') log(`${card.name} is Main-speed — only playable during Main Phase 1 or 2.`);
   else if(card.type==='Rite') log(`${card.name} can only be played during your own Main or Battle Phase.`);
   else if(card.type==='Realm') log(`${card.name}: Realms are Main-speed — only playable during Main Phase 1 or 2.`);
@@ -1947,7 +1947,7 @@ function castSpellCard(cardId){
     playRealm(card);
   } else {
     p.void.push(card); // Rites resolve once, then go to the Void
-    log(`${p.name} casts ${card.name} (${card.colour}, ${card.cost} essence).`);
+    log(`${p.name} casts ${card.name} (${card.colour}, ${card.cost} Attune).`);
     const m = mech(card.name);
     // Online multiplayer note, same caveat as Vessel on-play effects: this resolves locally on the
     // acting player's device only — interactive targeting isn't mirrored to the opponent's device.
@@ -2290,7 +2290,7 @@ function offerDeflect(cardId){
   const defender = state.players[defenderIdx];
   const card = defender.hand.find(c=>c.id===cardId && c.name==='Deflect');
   if(!card){ return; }
-  if(defender.essence < card.cost){ log(`Not enough essence to play Deflect.`); render(); return; }
+  if(defender.essence < card.cost){ log(`Not enough Attune to play Deflect.`); render(); return; }
   defender.essence -= card.cost;
   flashEssenceSpend(defenderIdx);
   defender.hand = defender.hand.filter(c=>c.id!==card.id);
@@ -2531,13 +2531,13 @@ const GLOSSARY = [
   { key:'untilNextTurn', term:'until your next turn', regexMatch:true,
     def:'Lasts through your opponent\'s whole turn and wears off when your own next turn begins.' },
   { key:'devotionColour', term:'devotion colour', regexMatch:true,
-    def:'The colour a column is currently attuned to. Only Vessels of that colour (at or below the column\'s Grade) can be placed there.' },
+    def:'The colour a column is currently devoted to. Only Vessels of that colour (at or below the column\'s Grade) can be placed there.' },
   { key:'permanently', term:'permanently', regexMatch:true,
     def:'Unlike an "until end of turn" effect, this change does NOT wear off — it stays in effect for the rest of the game (or until something else changes it).' },
   { key:'void', term:'Void', regexMatch:true,
     def:'Your discard pile — destroyed Vessels, used Rites, and discarded cards all end up here. Some cards can interact with cards already in the Void.' },
   { key:'grade', term:'Grade', regexMatch:true,
-    def:'A Vessel\'s power level (1–3). A column can only hold a Vessel whose Grade is at or below that column\'s current attunement Grade.' },
+    def:'A Vessel\'s power level (1–3). A column can only hold a Vessel whose Grade is at or below that column\'s current devotion Grade.' },
   { key:'sick', term:'SICK', regexMatch:false,
     def:'This Vessel was just played and has summoning sickness — it can\'t attack this turn. It\'s ready again on your next turn.' },
   { key:'stunned', term:'STUNNED', regexMatch:false,
@@ -2913,8 +2913,8 @@ function renderBoard(playerIdx, mirrored, domId){
     <div class="pname">${p.name}${isCurrent?'<span class="active-tag">● ACTIVE</span>':''}</div>
     <div class="badges">
       <div class="badge hpBadge"><span class="badgeIcon">HP</span>${p.hp}</div>
-      <div class="badge devBadge" title="${p.devotionTotal-p.devotion} of ${p.devotionTotal} devotion spent attuning this turn"><span class="badgeIcon">D</span>${p.devotion}/${p.devotionTotal}</div>
-      <div class="badge essenceBadge${essenceFlashing?' essenceFlashCue':''}" title="${p.essenceTotal-p.essence} of ${p.essenceTotal} essence spent casting this turn"><span class="badgeIcon">E</span>${p.essence}/${p.essenceTotal}</div>
+      <div class="badge devBadge" title="${p.devotionTotal-p.devotion} of ${p.devotionTotal} devotion spent on columns this turn"><span class="badgeIcon">D</span>${p.devotion}/${p.devotionTotal}</div>
+      <div class="badge essenceBadge${essenceFlashing?' essenceFlashCue':''}" title="${p.essenceTotal-p.essence} of ${p.essenceTotal} Attune spent playing cards this turn"><span class="badgeIcon">A</span>${p.essence}/${p.essenceTotal}</div>
       <div class="badge deckBadge"><span class="badgeIcon">✋</span>${p.hand.length} in hand</div>
     </div>
   </div>`;
@@ -2970,7 +2970,7 @@ function renderBoard(playerIdx, mirrored, domId){
     if(phase==='Devotion' && isCurrent && state.selectedAttuneColour){
       const grade = attuneTargetGrade(playerIdx, i, state.selectedAttuneColour);
       const cost = attuneCost(i, state.selectedAttuneColour, grade);
-      if(canAttune(i, grade, state.selectedAttuneColour)){ boxCls+=' placeable'; overlay=`<div class="zoneOverlay">▸ ATTUNE G${grade} (-${cost})</div>`; }
+      if(canAttune(i, grade, state.selectedAttuneColour)){ boxCls+=' placeable'; overlay=`<div class="zoneOverlay">▸ DEVOTE G${grade} (-${cost})</div>`; }
     }
 
     let queuedTag = '';
@@ -2979,7 +2979,7 @@ function renderBoard(playerIdx, mirrored, domId){
     }
     const devStripContent = col.colour
       ? `<span class="colDot dot-${col.colour}"></span><span>${col.colour} G${col.grade}</span>`
-      : `<span class="devStripEmpty">unattuned</span>`;
+      : `<span class="devStripEmpty">undevoted</span>`;
 
     // Economy-teaching visual cue: a one-render glow on the column strip the instant it's attuned
     // (see flashAttune()) — consumed and cleared here so it only ever plays once per attunement.
@@ -3120,7 +3120,7 @@ function renderDevotionPanel(){
   picker.style.display='flex';
   // Devotion is a per-turn pool, not a one-shot token — keep the picker open and show what's left to
   // spend, so it's clear you can attune several columns (or bump one further) in the same turn.
-  document.getElementById('devPickerLabelText').textContent = `Attune a colour, then click a column — ${p.devotionTotal-p.devotion} of ${p.devotionTotal} devotion spent this turn (${p.devotion} left):`;
+  document.getElementById('devPickerLabelText').textContent = `Devote a colour, then click a column — ${p.devotionTotal-p.devotion} of ${p.devotionTotal} devotion spent this turn (${p.devotion} left):`;
   const btnsEl = document.getElementById('devColourBtns');
   if(p.devotion<=0){
     btnsEl.innerHTML = `<div class="devPickerDone">✓ All ${p.devotionTotal} devotion spent this turn</div>`;
@@ -3139,7 +3139,7 @@ function explainCardSelection(card){
   const label = PHASE_LABELS[PHASES[state.phaseIdx]] || 'Main Phase';
   if(card.type==='Rite' || card.type==='Realm'){
     if(!canPlayCard(state.current, card)){
-      if(p.essence < card.cost) return `<span class="step">${label}</span> — <b>${card.name}</b> needs ${card.cost} essence, you have ${p.essence}. Click the card again to deselect it.`;
+      if(p.essence < card.cost) return `<span class="step">${label}</span> — <b>${card.name}</b> needs ${card.cost} Attune, you have ${p.essence}. Click the card again to deselect it.`;
       if(card.type==='Rite' && card.speed!=='Instant') return `<span class="step">${label}</span> — <b>${card.name}</b> is Main-speed — only playable during Main Phase 1 or 2. Click it again to deselect.`;
       if(card.type==='Rite') return `<span class="step">${label}</span> — <b>${card.name}</b> can only be played during your own Main or Battle Phase. Click it again to deselect.`;
       return `<span class="step">${label}</span> — <b>${card.name}</b>: Realms are Main-speed — only playable during Main Phase 1 or 2. Click it again to deselect.`;
@@ -3149,14 +3149,14 @@ function explainCardSelection(card){
     const re = m.riteEffect || {};
     if(re.drawCard) return `<span class="step">${label}</span> — <b>${card.name}</b> selected. It has no target — click it <b>again</b> to cast it and draw a card.`;
     if(re.returnGrade1FromVoid) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — click a <b style="color:#ffd76b">highlighted</b> Grade 1 Vessel in your Void (open it below the board) to cast it and return that Vessel to hand.`;
-    if(re.reattuneColumn) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — pick the new colour in the sidebar panel, then click one of your attuned columns to apply it.`;
+    if(re.reattuneColumn) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — pick the new colour in the sidebar panel, then click one of your devoted columns to apply it.`;
     if(riteEffectWantsBoardZone(m)) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — click a <b style="color:#7ee787">highlighted</b> Vessel on either board to cast it against that target.`;
     return `<span class="step">${label}</span> — <b>${card.name}</b> selected. Click it again to deselect.`;
   }
   // Placement is free once a column is attuned — devotion was already spent attuning it.
   // The only reason a card can't be placed now is a colour/grade mismatch with every attuned column.
   if(!p.columns.some(c=>c.colour===card.colour && c.grade>=card.grade)){
-    return `<span class="step">${label}</span> — <b>${card.name}</b> is <b>${card.colour} Grade ${card.grade}</b>, but no column is attuned to that colour at grade ${card.grade} or higher. Attune a matching column (Devotion Phase) to unlock it, or pick a different card. No zones will light up for this card.`;
+    return `<span class="step">${label}</span> — <b>${card.name}</b> is <b>${card.colour} Grade ${card.grade}</b>, but no column is devoted to that colour at grade ${card.grade} or higher. Devote a matching column (Devotion Phase) to unlock it, or pick a different card. No zones will light up for this card.`;
   }
   return `<span class="step">${label}</span> — <b>${card.name}</b> selected — placement is free. Click or drop it on a <b style="color:#7ee787">green "PLACE HERE"</b> zone to summon it. Click the card again to deselect.`;
 }
@@ -3173,7 +3173,7 @@ function pendingEffectInstruction(pe){
   if(pe.kind==='reattuneColumn'){
     return pe.stage==='selectColour'
       ? `<span class="step">Effect Pending</span> — ${sourceName}: pick the new colour in the sidebar panel.`
-      : `<span class="step">Effect Pending</span> — ${sourceName}: click one of your own attuned columns to change it to ${pe.selectedColour}.`;
+      : `<span class="step">Effect Pending</span> — ${sourceName}: click one of your own devoted columns to change it to ${pe.selectedColour}.`;
   }
   if(pe.kind==='redirectAttack') return `<span class="step">Deflect</span> — ${sourceName}: click a <b>different</b> Vessel you control to redirect the attack onto it.`;
   if(pe.kind==='moveFriendlyAdjacent'){
@@ -3201,7 +3201,7 @@ function updateBigInstruction(){
   } else if(phase==='Devotion'){
     msg = p.devotion<=0
       ? `<span class="step">Devotion Phase</span> — All ${p.devotionTotal} devotion spent this turn. Click <b>Next Phase</b> to draw your card.`
-      : `<span class="step">Devotion Phase</span> — ${p.name} has spent <b>${p.devotionTotal-p.devotion} of ${p.devotionTotal}</b> devotion this turn (<b>${p.devotion} left</b>) — attune as many columns (or bump one further) as you can afford. Pick a colour in the sidebar, then click a column — or click <b>Next Phase</b> when you're done.`;
+      : `<span class="step">Devotion Phase</span> — ${p.name} has spent <b>${p.devotionTotal-p.devotion} of ${p.devotionTotal}</b> devotion this turn (<b>${p.devotion} left</b>) — devote as many columns (or bump one further) as you can afford. Pick a colour in the sidebar, then click a column — or click <b>Next Phase</b> when you're done.`;
   } else if(phase==='Draw'){
     msg = `<span class="step">Draw Phase</span> — resolved automatically. Click <b>Next Phase</b> to continue to Main Phase 1.`;
   } else if(isMainPhase(phase)){
@@ -3212,8 +3212,8 @@ function updateBigInstruction(){
     } else {
       const anyAttuned = p.columns.some(c=>c.colour);
       msg = anyAttuned
-        ? `<span class="step">${label}</span> — Click a card in your hand to select it, then click a highlighted zone to place it. Only columns attuned to that card's colour (grade or higher) light up.`
-        : `<span class="step">${label}</span> — No columns attuned yet, so nothing can be placed this turn. Click <b>Next Phase</b> to continue (attune next turn).`;
+        ? `<span class="step">${label}</span> — Click a card in your hand to select it, then click a highlighted zone to place it. Only columns devoted to that card's colour (grade or higher) light up.`
+        : `<span class="step">${label}</span> — No columns devoted yet, so nothing can be placed this turn. Click <b>Next Phase</b> to continue (devote next turn).`;
     }
   } else if(phase==='Battle'){
     if(state.selectedAttackerZone){
@@ -3240,8 +3240,8 @@ function renderStickyHud(){
     <div class="hudName">${p.name} <span class="hudPhase">· ${PHASE_LABELS[phase]}</span></div>
     <div class="hudBadges">
       <div class="badge hpBadge"><span class="badgeIcon">HP</span>${p.hp}</div>
-      <div class="badge devBadge" title="${p.devotionTotal-p.devotion} of ${p.devotionTotal} devotion spent attuning this turn"><span class="badgeIcon">D</span>${p.devotion}/${p.devotionTotal} devotion</div>
-      <div class="badge essenceBadge" title="${p.essenceTotal-p.essence} of ${p.essenceTotal} essence spent casting this turn"><span class="badgeIcon">E</span>${p.essence}/${p.essenceTotal} essence</div>
+      <div class="badge devBadge" title="${p.devotionTotal-p.devotion} of ${p.devotionTotal} devotion spent on columns this turn"><span class="badgeIcon">D</span>${p.devotion}/${p.devotionTotal} devotion</div>
+      <div class="badge essenceBadge" title="${p.essenceTotal-p.essence} of ${p.essenceTotal} Attune spent playing cards this turn"><span class="badgeIcon">A</span>${p.essence}/${p.essenceTotal} Attune</div>
       <div class="badge deckBadge"><span class="badgeIcon">≡</span>${p.deck.length} deck</div>
       <div class="badge deckBadge"><span class="badgeIcon">✋</span>${p.hand.length}/6 hand</div>
     </div>`;
@@ -3393,7 +3393,7 @@ function render(){
 
   const hint = document.getElementById('hint');
   const hints = {
-    Devotion: `Spend devotion to attune a column (cost = grade). One attunement per turn.`,
+    Devotion: `Spend devotion on columns: each point raises one column by one Grade.`,
     Draw: `Draws 1 card automatically (starting player skips their first draw).`,
     Main1: `Click a hand card, then click a highlighted zone to place it.`,
     Battle: `Click a non-sick, non-spent front-row Vessel, then click a target.`,
