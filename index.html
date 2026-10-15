@@ -915,6 +915,25 @@ body:not(.mobile) #realmZoneWrap{position:relative;}
 body:not(.mobile) #realmZoneWrap::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;
   background:linear-gradient(90deg,transparent,rgba(255,215,107,.5) 25%,rgba(255,215,107,.5) 75%,transparent);z-index:-1;}
 body:not(.mobile) .phaseStep.active{box-shadow:0 0 16px rgba(255,215,107,.6);}
+
+/* card inspect overlay (phone): sized to the screen, X always reachable, Play under/beside the card */
+body.mobile #cardZoomOverlay{flex-direction:column;gap:12px;padding:12px;--zh:min(432px, calc(100dvh - 130px), calc((100vw - 32px) * 1144 / 795));}
+body.mobile #cardZoomInner{height:var(--zh) !important;width:calc(var(--zh) * 795 / 1144) !important;flex:none;will-change:transform;}
+body.mobile #cardZoomInner .card.ecard{filter:drop-shadow(0 10px 28px rgba(0,0,0,.85)) drop-shadow(0 0 18px rgba(255,215,107,.25));}
+body.mobile #cardZoomClose{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));width:42px;height:42px;font-size:17px;z-index:5;box-shadow:0 2px 10px rgba(0,0,0,.6);}
+#mZoomActions{display:none;}
+body.mobile #cardZoomOverlay.hasPlay #mZoomActions{display:flex;flex-direction:column;gap:8px;width:min(300px,80vw);}
+#mZoomActions button{padding:12px 16px;font-size:15px;font-weight:800;border-radius:999px;}
+#mZoomPlay:not(:disabled){background:linear-gradient(180deg,#ffe28a,#e0a93a) !important;color:#1c1204 !important;border:1px solid #fff2c4 !important;box-shadow:0 0 16px rgba(255,215,107,.5);}
+#mZoomBack{background:rgba(40,34,80,.8);border:1px solid rgba(150,130,255,.4);}
+@media (orientation:landscape){
+  body.mobile #cardZoomOverlay{flex-direction:row;gap:22px;--zh:min(432px, calc(100dvh - 28px));}
+  body.mobile #cardZoomOverlay.hasPlay #mZoomActions{width:220px;}
+}
+/* board cards: a small round 🔍 so it's obvious they can be enlarged (tap it, or long-press the card) */
+body.mobile .vesselZone .card.ecard .zoomBtn,body.mobile .voidZoneBig .card.ecard .zoomBtn{display:flex !important;align-items:center;justify-content:center;
+  top:auto;bottom:4%;left:4%;width:16px;height:16px;padding:0;font-size:8px;border-radius:50%;background:rgba(6,5,16,.85);border:1px solid rgba(255,215,107,.6);}
+body.mobile .voidZoneBig .card.ecard .zoomBtn{display:none !important;}
 @media (prefers-reduced-motion:reduce){
   .colBox.placeable,.colBox.targetable,#nextPhaseBtn,.boardHeader .pname .active-tag{animation:none !important;}
 }
@@ -4404,6 +4423,57 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   ['log','deflectPrompt','riteOfferPrompt','phaseWarningPrompt'].forEach(function(id){ document.body.appendChild($(id)); });
   document.addEventListener('click',function(e){ if(document.body.classList.contains('showLog') && !$('log').contains(e.target) && e.target!==logBtn) document.body.classList.remove('showLog'); });
   $('bigInstruction').addEventListener('click',function(){ this.classList.toggle('expanded'); });
+
+  // ---- Card inspect: tapped cards fly to the centre; hand cards get a Play button there ----
+  var zOv=$('cardZoomOverlay'), zIn=$('cardZoomInner');
+  var zAct=el('div','mZoomActions'), zPlay=el('button','mZoomPlay','primary'), zBack=el('button','mZoomBack',null,'Back to hand');
+  zAct.appendChild(zPlay); zAct.appendChild(zBack); zOv.appendChild(zAct);
+  var zSrc=null, zPlayFn=null, zBusy=false, lastCardEl=null;
+  document.addEventListener('pointerdown',function(e){ var c=e.target.closest&&e.target.closest('.card.ecard'); if(c && !c.closest('#cardZoomOverlay')) lastCardEl=c; },true);
+  function flyRect(from,to){ return {dx:(from.left+from.width/2)-(to.left+to.width/2), dy:(from.top+from.height/2)-(to.top+to.height/2), s:from.width/Math.max(1,to.width)}; }
+  var baseZoom=zoomCard, baseHide=hideCardZoom;
+  zoomCard=function(id, src, playFn){
+    baseZoom(id);
+    zPlayFn=playFn||null; zOv.classList.toggle('hasPlay', !!zPlayFn);
+    zSrc = src || (lastCardEl && lastCardEl.isConnected ? lastCardEl : null);
+    var card=zIn.querySelector('.card.ecard');
+    if(zSrc && card && zIn.animate){
+      var f=flyRect(zSrc.getBoundingClientRect(), card.getBoundingClientRect());
+      zSrc.style.visibility='hidden';
+      zIn.animate([{transform:'translate('+f.dx+'px,'+f.dy+'px) scale('+f.s+')'},{transform:'none'}],{duration:300,easing:'cubic-bezier(.2,.85,.25,1)'});
+    }
+    zOv.animate && zOv.animate([{backgroundColor:'rgba(0,0,0,0)'},{backgroundColor:'rgba(0,0,0,.78)'}],{duration:260});
+    zAct.animate && zAct.animate([{opacity:0,transform:'translateY(10px)'},{opacity:0,offset:.5},{opacity:1,transform:'none'}],{duration:380});
+  };
+  hideCardZoom=function(after){
+    if(zBusy) return;
+    var card=zIn.querySelector('.card.ecard'), src=zSrc; zSrc=null;
+    function done(){ zBusy=false; baseHide(); zOv.classList.remove('hasPlay'); if(src) src.style.visibility=''; if(typeof after==='function') after(); }
+    if(src && src.isConnected && card && zIn.animate){
+      zBusy=true;
+      var f=flyRect(src.getBoundingClientRect(), card.getBoundingClientRect());
+      zAct.animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'});
+      zIn.animate([{transform:'none'},{transform:'translate('+f.dx+'px,'+f.dy+'px) scale('+f.s+')'}],{duration:230,easing:'cubic-bezier(.5,0,.75,.4)'}).onfinish=done;
+      zOv.animate([{backgroundColor:'rgba(0,0,0,.78)'},{backgroundColor:'rgba(0,0,0,0)'}],{duration:230});
+    } else done();
+  };
+  zBack.onclick=function(e){ e.stopPropagation(); hideCardZoom(); };
+  zPlay.onclick=function(e){ e.stopPropagation(); var fn=zPlayFn; zPlayFn=null; var src=zSrc; zSrc=null; if(src) src.style.visibility=''; baseHide(); zOv.classList.remove('hasPlay'); if(fn) fn(); };
+  // tap the big card (not a keyword) to put it back
+  zIn.addEventListener('click',function(e){ if(e.target.closest('.kw')||e.target.closest('button')) return; hideCardZoom(); });
+  // hand tap: inspect first, play from the button (tapping an already-selected card still deselects it)
+  $('handCards').addEventListener('click',function(e){
+    var w=e.target.closest('.cardWrap'); if(!w || e.target.closest('.kw')) return;
+    var c=w.querySelector('.card.ecard'); if(!c || c.classList.contains('selected')) return;
+    var id=parseInt((c.id||'').replace('cardEl-',''),10); if(isNaN(id)) return;
+    e.stopPropagation(); e.preventDefault();
+    var act=w.getAttribute('onclick')||'', canAct=/selectCard\(/.test(act);
+    var discard=/discard/i.test(($('handTitle')||{}).textContent||'');
+    var cardObj=cardRegistry[id]||{};
+    zPlay.textContent = discard ? 'Discard this card' : (cardObj.type==='Vessel' ? 'Play — pick a column' : 'Play this card');
+    zPlay.disabled = parseFloat(w.style.opacity||'1')<1 && !discard;
+    zoomCard(id, c, canAct ? function(){ selectCard(id); } : null);
+  },true);
   document.body.classList.add('mobile');
 
   var baseRender=render;
