@@ -571,6 +571,55 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 #realmZone{background:rgba(30,20,60,.55) !important;}
 h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap">
+<style id="mainMenu">
+#lobbyOverlay{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#07060f;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow:hidden;}
+#lobbyOverlay.hidden{display:none;}
+.mmNebula{position:absolute;inset:-30%;pointer-events:none;opacity:.55;filter:blur(30px);
+  background:radial-gradient(30% 25% at 25% 30%,#e0473a55,transparent 70%),radial-gradient(28% 24% at 75% 25%,#3f8ce055,transparent 70%),
+  radial-gradient(30% 26% at 70% 75%,#9a5be066,transparent 70%),radial-gradient(26% 22% at 25% 78%,#3fae5f44,transparent 70%),
+  radial-gradient(35% 30% at 50% 50%,#2c1f5a,transparent 75%);animation:mmDrift 40s ease-in-out infinite alternate;}
+.mmStars{position:absolute;inset:0;pointer-events:none;opacity:.85;
+  background-image:radial-gradient(1.5px 1.5px at 12% 18%,#dcd7ff,transparent),radial-gradient(1px 1px at 78% 12%,#fff,transparent),
+  radial-gradient(1.5px 1.5px at 33% 72%,#dcd7ff,transparent),radial-gradient(1px 1px at 88% 64%,#fff,transparent),
+  radial-gradient(1px 1px at 55% 35%,#dcd7ff,transparent),radial-gradient(1.5px 1.5px at 20% 88%,#ffe9b0,transparent),
+  radial-gradient(1px 1px at 66% 90%,#dcd7ff,transparent),radial-gradient(1px 1px at 8% 50%,#fff,transparent),
+  radial-gradient(1.5px 1.5px at 92% 34%,#dcd7ff,transparent),radial-gradient(1px 1px at 45% 8%,#fff,transparent);
+  animation:mmTwinkle 5s ease-in-out infinite alternate;}
+.mmStars2{transform:rotate(180deg) scale(1.2);animation-delay:-2.5s;opacity:.6;}
+.mmInner{position:relative;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+.mmLogo{width:min(46vmin,190px);height:auto;filter:drop-shadow(0 0 22px #ffd76b33);}
+.mmSpin{transform-origin:256px 256px;animation:mmSpin 60s linear infinite;}
+.mmTitle{margin:0;font-family:'Cinzel',Georgia,serif;font-weight:800;font-size:clamp(34px,11vw,52px);letter-spacing:.18em;
+  color:#ffd76b;text-shadow:0 0 18px #ffd76b55,0 2px 0 #7a5418;padding-left:.18em;}
+.mmTag{font-family:'Cinzel',Georgia,serif;font-weight:600;font-size:12px;letter-spacing:.12em;color:#b8aee0;text-transform:uppercase;margin-top:-8px;margin-bottom:10px;text-align:center;}
+.mmScreen{width:100%;display:flex;flex-direction:column;gap:12px;animation:mmIn .35s ease-out;}
+.mmScreen[hidden]{display:none;}
+.mmBtn{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;border-radius:12px;
+  background:linear-gradient(135deg,rgba(28,22,56,.86),rgba(12,10,26,.9));border:1.5px solid #c4a87066;color:#eee;
+  box-shadow:0 4px 18px rgba(0,0,0,.45),inset 0 1px 0 #ffffff12;transition:transform .12s,border-color .15s,box-shadow .15s;cursor:pointer;}
+.mmBtn:hover:not(:disabled),.mmBtn:focus-visible{border-color:#ffd76b;box-shadow:0 0 0 1px #ffd76b55,0 0 20px #ffd76b33,0 4px 18px rgba(0,0,0,.45);background:linear-gradient(135deg,rgba(40,30,78,.9),rgba(16,12,34,.92));outline:none;}
+.mmBtn:active{transform:scale(.97);}
+.mmGem{flex:none;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff8,var(--g) 45%);border:1.5px solid #fff0c8;box-shadow:0 0 10px var(--g);}
+.mmTxt{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.mmTxt b{font-family:'Cinzel',Georgia,serif;font-weight:800;font-size:18px;letter-spacing:.06em;color:#ffd76b;}
+.mmTxt small{font-size:12.5px;color:#b8b4cc;line-height:1.3;}
+.mmJoin{display:flex;gap:8px;}
+.mmJoin input{flex:1;min-width:0;background:rgba(10,8,20,.85);border:1.5px solid #c4a87066;border-radius:10px;color:#fff;padding:12px;font-size:16px;letter-spacing:.2em;text-transform:uppercase;}
+.mmJoin input:focus{outline:none;border-color:#ffd76b;}
+.mmJoin button{padding:0 20px;border-radius:10px;background:#5a3fd9;border:1.5px solid #8a76e8;color:#fff;font-family:'Cinzel',Georgia,serif;font-weight:800;font-size:15px;}
+#lobbyStatus{font-size:12.5px;color:#ffd76b;min-height:16px;line-height:1.4;text-align:center;}
+.mmBack{align-self:center;background:none;border:none;color:#b8aee0;font-family:'Cinzel',Georgia,serif;font-weight:600;font-size:14px;letter-spacing:.08em;padding:8px 16px;}
+.mmFoot{position:absolute;bottom:max(10px,env(safe-area-inset-bottom));font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#5e5878;}
+@keyframes mmSpin{to{transform:rotate(360deg)}}
+@keyframes mmDrift{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(4%,-3%) rotate(8deg)}}
+@keyframes mmTwinkle{0%{opacity:.45}100%{opacity:.9}}
+@keyframes mmIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (max-height:600px){.mmLogo{width:110px}.mmTag{display:none}}
+@media (prefers-reduced-motion:reduce){.mmNebula,.mmStars,.mmSpin,.mmScreen{animation:none!important}}
+</style>
 </head>
 <body>
 <div id="enscraIntro" aria-hidden="true">
@@ -627,7 +676,7 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
   <div style="display:flex;gap:8px;">
     <button class="small" id="sfxToggleBtn" onclick="toggleSfx()">🔊 Sound</button>
     <button class="small" id="economyHelpBtn" onclick="restartTurnGuide()" title="Walk through a first turn step by step">❓ How to Play</button>
-    <button class="small" onclick="location.reload()">Restart Game</button>
+    <button class="small" onclick="location.reload()">Main Menu</button>
   </div>
 </div>
 
@@ -677,7 +726,7 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 </div>
 </div>
 
-<div id="winOverlay"><h2 id="winText"></h2><button class="primary" onclick="location.reload()">Play Again</button></div>
+<div id="winOverlay"><h2 id="winText"></h2><button class="primary" onclick="location.reload()">Main Menu</button></div>
 
 <div id="cardZoomOverlay" onclick="if(event.target===this) hideCardZoom()">
   <div id="cardZoomInner"></div>
@@ -700,18 +749,33 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 <div id="stickyHud"></div>
 
 <div id="lobbyOverlay">
-  <div id="lobbyBox">
-    <h2>ENSCRA — Choose how to play</h2>
-    <button class="primary" id="lobbyHotseatBtn">Play solo on this device (hotseat)</button>
-    <button class="primary" id="lobbyAiBtn">Play vs AI (you: Emberroot, AI: Tidewind)</button>
-    <div class="lobbyDivider">— or play online with a friend —</div>
-    <div class="lobbyOnlineRow"><button class="primary" id="lobbyHostBtn" style="width:100%;">Host a new game</button></div>
-    <div class="lobbyOnlineRow">
-      <input id="lobbyJoinCode" placeholder="Room code" maxlength="6">
-      <button id="lobbyJoinBtn">Join</button>
+  <div class="mmNebula"></div><div class="mmStars"></div><div class="mmStars mmStars2"></div>
+  <div class="mmInner">
+    <svg class="mmLogo" viewBox="0 0 512 512" aria-hidden="true">
+      <g class="mmSpin"><circle cx="256" cy="256" r="184.3" fill="none" stroke="#ffd76b" stroke-width="7"/><circle cx="256.0" cy="71.7" r="28" fill="#e0473a" stroke="#fff0c8" stroke-width="4"/><circle cx="431.3" cy="199.0" r="28" fill="#3fae5f" stroke="#fff0c8" stroke-width="4"/><circle cx="364.3" cy="405.1" r="28" fill="#3f8ce0" stroke="#fff0c8" stroke-width="4"/><circle cx="147.7" cy="405.1" r="28" fill="#e6e6e6" stroke="#fff0c8" stroke-width="4"/><circle cx="80.7" cy="199.0" r="28" fill="#9a5be0" stroke="#fff0c8" stroke-width="4"/></g>
+      <text x="256" y="262" text-anchor="middle" dominant-baseline="middle" font-family="Georgia,'DejaVu Serif',serif" font-weight="700" font-size="200" fill="#ffd76b">E</text>
+    </svg>
+    <h2 class="mmTitle">ENSCRA</h2>
+    <div class="mmTag">Five colours. One written magic.</div>
+
+    <div class="mmScreen" id="mmMain">
+      <button class="mmBtn" id="mmTutorialBtn"><span class="mmGem" style="--g:#e6e6e6"></span><span class="mmTxt"><b>Tutorial</b><small>Learn a full turn, step by step, vs the AI</small></span></button>
+      <button class="mmBtn" id="lobbyAiBtn"><span class="mmGem" style="--g:#3f8ce0"></span><span class="mmTxt"><b>Vs AI</b><small>Emberroot vs Tidewind</small></span></button>
+      <button class="mmBtn" id="mmVsPlayerBtn"><span class="mmGem" style="--g:#e0473a"></span><span class="mmTxt"><b>Vs Player</b><small>Same phone or online with a friend</small></span></button>
     </div>
-    <div id="lobbyStatus"></div>
+
+    <div class="mmScreen" id="mmPlayer" hidden>
+      <button class="mmBtn" id="lobbyHotseatBtn"><span class="mmGem" style="--g:#3fae5f"></span><span class="mmTxt"><b>Same Phone</b><small>Pass and play, take turns on this device</small></span></button>
+      <button class="mmBtn" id="lobbyHostBtn"><span class="mmGem" style="--g:#9a5be0"></span><span class="mmTxt"><b>Host Online</b><small>Get a room code to send your friend</small></span></button>
+      <div class="mmJoin">
+        <input id="lobbyJoinCode" placeholder="Room code" maxlength="6" autocomplete="off" autocapitalize="characters">
+        <button id="lobbyJoinBtn">Join</button>
+      </div>
+      <div id="lobbyStatus"></div>
+      <button class="mmBack" id="mmBackBtn">‹ Back</button>
+    </div>
   </div>
+  <div class="mmFoot">Prototype build</div>
 </div>
 
 <script type="module">
@@ -3679,7 +3743,6 @@ function genRoomCode(){
 function closeLobby(){
   const el = document.getElementById('lobbyOverlay');
   if(el) el.classList.add('hidden');
-  maybeStartTurnGuideOnFirstLaunch();
   // The board behind the lobby was already painted once at page load (see the unconditional startTurn()
   // call at the bottom of this script), so there's no upcoming render() to pick this up automatically —
   // paint the tutorial's first tip immediately rather than waiting on the player's next action.
@@ -3715,6 +3778,22 @@ function startAiGame(){
   ai.seat = 1;
   closeLobby();
   rollForStartingPlayer();
+}
+// Tutorial: vs the AI, but the human always goes first and the step-by-step guide is forced on.
+function startTutorial(){
+  ai.active = true;
+  ai.seat = 1;
+  closeLobby();
+  const firstSeat = opp(ai.seat);
+  state.players.forEach((p,i)=>{
+    p.isStartingPlayer = (i===firstSeat);
+    p.turnCount = 0; p.devotion = 0; p.devotionTotal = 0; p.essence = 0; p.essenceTotal = 0;
+  });
+  state.current = firstSeat;
+  log(`Tutorial — you go first. Follow the tips on screen.`);
+  turnGuideActive = true;
+  turnGuideStepIdx = 0;
+  startTurn();
 }
 function startOnlineGame(seat, roomCode){
   const statusEl = document.getElementById('lobbyStatus');
@@ -3774,20 +3853,23 @@ function startOnlineGame(seat, roomCode){
   }
 }
 (function wireLobby(){
-  const hotseatBtn = document.getElementById('lobbyHotseatBtn');
-  const aiBtn = document.getElementById('lobbyAiBtn');
-  const hostBtn = document.getElementById('lobbyHostBtn');
-  const joinBtn = document.getElementById('lobbyJoinBtn');
-  const joinInput = document.getElementById('lobbyJoinCode');
-  if(hotseatBtn) hotseatBtn.addEventListener('click', closeLobby);
-  if(aiBtn) aiBtn.addEventListener('click', startAiGame);
-  if(hostBtn) hostBtn.addEventListener('click', ()=>startOnlineGame(0, genRoomCode()));
-  if(joinBtn) joinBtn.addEventListener('click', ()=>{
+  const $ = id => document.getElementById(id);
+  const tap = fn => () => { playSfx('phase'); fn(); };
+  const showScreen = id => { ['mmMain','mmPlayer'].forEach(x=>{ const el=$(x); if(el) el.hidden = (x!==id); }); };
+  const joinInput = $('lobbyJoinCode');
+  $('mmTutorialBtn') && $('mmTutorialBtn').addEventListener('click', tap(startTutorial));
+  $('lobbyAiBtn') && $('lobbyAiBtn').addEventListener('click', tap(startAiGame));
+  $('mmVsPlayerBtn') && $('mmVsPlayerBtn').addEventListener('click', tap(()=>showScreen('mmPlayer')));
+  $('mmBackBtn') && $('mmBackBtn').addEventListener('click', tap(()=>showScreen('mmMain')));
+  $('lobbyHotseatBtn') && $('lobbyHotseatBtn').addEventListener('click', tap(closeLobby));
+  $('lobbyHostBtn') && $('lobbyHostBtn').addEventListener('click', tap(()=>startOnlineGame(0, genRoomCode())));
+  $('lobbyJoinBtn') && $('lobbyJoinBtn').addEventListener('click', tap(()=>{
     const code = (joinInput && joinInput.value || '').trim().toUpperCase();
-    const statusEl = document.getElementById('lobbyStatus');
+    const statusEl = $('lobbyStatus');
     if(!code){ if(statusEl) statusEl.textContent = 'Enter a room code first.'; return; }
     startOnlineGame(1, code);
-  });
+  }));
+  if(joinInput) joinInput.addEventListener('keydown', e=>{ if(e.key==='Enter') $('lobbyJoinBtn').click(); });
 })();
 
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') hideCardZoom(); });
