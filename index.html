@@ -249,7 +249,7 @@
   #cardZoomOverlay.open{display:flex;}
   #modeTx{display:none;position:fixed;inset:0;z-index:300;pointer-events:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
   #modeTx.on{display:flex;}
-  #modeTx .mtRing{width:min(46vmin,230px);height:auto;filter:drop-shadow(0 0 18px rgba(255,215,107,.55));opacity:0;}
+  #modeTx .mtRing{width:min(46vmin,230px);height:auto;opacity:0;overflow:visible;}
   #modeTx .mtLabel{font-family:Georgia,serif;color:#ffd76b;font-size:20px;letter-spacing:.3em;text-transform:uppercase;text-shadow:0 0 14px rgba(255,215,107,.6);opacity:0;padding-left:.3em;}
   #modeTx .mtFlash{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,236,170,.95),rgba(255,200,80,.35) 35%,transparent 70%);opacity:0;}
   #soundPanel{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;}
@@ -596,7 +596,7 @@ h1{text-shadow:0 2px 10px rgba(0,0,0,.8);}
 #lobbyOverlay{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:#07060f;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow:hidden;}
 #lobbyOverlay.hidden{display:none;}
-.mmNebula{position:absolute;inset:-30%;pointer-events:none;opacity:.55;filter:blur(30px);
+.mmNebula{position:absolute;inset:-30%;pointer-events:none;opacity:.55;
   background:radial-gradient(30% 25% at 25% 30%,#e0473a55,transparent 70%),radial-gradient(28% 24% at 75% 25%,#3f8ce055,transparent 70%),
   radial-gradient(30% 26% at 70% 75%,#9a5be066,transparent 70%),radial-gradient(26% 22% at 25% 78%,#3fae5f44,transparent 70%),
   radial-gradient(35% 30% at 50% 50%,#2c1f5a,transparent 75%);animation:mmDrift 40s ease-in-out infinite alternate;}
@@ -1099,7 +1099,8 @@ body:not(.mobile) .vesselZone .card.ecard .ecStats{font-size:15px !important;pad
 
 <div id="modeTx" aria-hidden="true">
   <div class="mtFlash"></div>
-  <svg class="mtRing" viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" fill="none" stroke="#ffd76b" stroke-width="2.5"/>
+  <svg class="mtRing" viewBox="0 0 200 200"><defs><radialGradient id="mtGlow"><stop offset="55%" stop-color="#ffd76b" stop-opacity=".22"/><stop offset="100%" stop-color="#ffd76b" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="100" cy="100" r="112" fill="url(#mtGlow)"/><circle cx="100" cy="100" r="78" fill="none" stroke="#ffd76b" stroke-width="2.5"/>
     <circle cx="100" cy="100" r="88" fill="none" stroke="#ffd76b" stroke-opacity=".35" stroke-width="1" stroke-dasharray="2 6"/>
     <circle cx="100" cy="22" r="7" fill="#e0473a"/><circle cx="174" cy="76" r="7" fill="#3fae5f"/><circle cx="146" cy="163" r="7" fill="#3f8ce0"/>
     <circle cx="54" cy="163" r="7" fill="#e6e6e6"/><circle cx="26" cy="76" r="7" fill="#9a5be0"/>
@@ -4311,8 +4312,9 @@ function playModeTransition(label){
     ghost = lobby.cloneNode(true); ghost.id = 'lobbyGhost'; ghost.classList.remove('hidden');
     ghost.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
     ghost.style.pointerEvents = 'none'; ghost.style.zIndex = '299';
+    ghost.querySelectorAll('.mmNebula').forEach(n=>n.remove());
     document.body.appendChild(ghost);
-    ghost.animate([{opacity:1, scale:'1', filter:'blur(0px)'},{opacity:0, scale:'1.18', filter:'blur(8px)'}],
+    ghost.animate([{opacity:1, transform:'scale(1)'},{opacity:0, transform:'scale(1.12)'}],
       {duration:520, easing:'cubic-bezier(.4,0,.7,1)', fill:'forwards'}).onfinish = ()=>ghost.remove();
   }
   if(reduce){
@@ -4329,8 +4331,8 @@ function playModeTransition(label){
                {opacity:1, offset:.6},{opacity:0, transform:'translateY(-6px)', letterSpacing:'.5em'}],
     {duration:1500, easing:'ease-out', fill:'forwards'});
   flash.animate([{opacity:0},{opacity:0, offset:.58},{opacity:.85, offset:.64},{opacity:0}],{duration:1500, fill:'forwards'});
-  if(game) game.animate([{opacity:0, scale:'1.08', filter:'blur(6px)'},{opacity:0, scale:'1.08', filter:'blur(6px)', offset:.58},{opacity:1, scale:'1', filter:'blur(0px)'}],
-    {duration:1500, easing:'cubic-bezier(.2,.8,.3,1)'});
+  if(game) game.animate([{opacity:0},{opacity:0, offset:.58},{opacity:1}],
+    {duration:1500, easing:'ease-out'});
 }
 function startOnlineGame(seat, roomCode){
   const statusEl = document.getElementById('lobbyStatus');
