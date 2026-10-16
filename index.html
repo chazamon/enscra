@@ -258,7 +258,7 @@
   #cardZoomInner .statsBadge{font-size:20px;padding:4px 14px;}
   #cardZoomInner .zoomBtn{display:none;}
   #cardZoomClose{
-    position:absolute;top:-14px;right:-14px;width:30px;height:30px;border-radius:50%;
+    position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));width:36px;height:36px;border-radius:50%;
     background:#e0473a;color:#fff;border:2px solid #fff;font-weight:800;cursor:pointer;z-index:5;font-size:14px;
   }
 
@@ -514,7 +514,7 @@
 .ecText .kw{border-bottom:1px dotted #7a5418;}
 .ecType .kw{border-bottom:1px dotted #7a5418;}
 .ecStats{position:absolute;left:83%;top:90.8%;transform:translate(-50%,-50%);font-weight:700;font-size:5.6cqw;line-height:1;white-space:nowrap;}
-.ecStats.mod{background:#1a1208;color:#ffd76b;border-radius:1.2cqw;padding:.6cqw 1.6cqw;box-shadow:0 0 2cqw #ffd76baa;}
+.ecStats .statMod{color:#ffd23a;-webkit-text-stroke:.35cqw #1a1004;paint-order:stroke fill;text-shadow:0 0 1.6cqw rgba(255,200,40,.75);}
 .card.ecard .tag{top:12.5%;right:14.5%;left:auto;font-family:system-ui,sans-serif;}
 .card.ecard .zoomBtn{top:12.5%;left:14%;font-family:system-ui,sans-serif;}
 .card.ecard.selected{outline:none;filter:drop-shadow(0 0 3px #fff) drop-shadow(0 0 7px #fff);}
@@ -1048,6 +1048,7 @@ body.mobile .voidZoneBig .card.ecard .zoomBtn{display:none !important;}
 <div id="winOverlay"><h2 id="winText"></h2><button class="primary" onclick="location.reload()">Main Menu</button></div>
 
 <div id="cardZoomOverlay" onclick="if(event.target===this) hideCardZoom()">
+  <button id="cardZoomClose" onclick="event.stopPropagation();hideCardZoom()" title="Close">✕</button>
   <div id="cardZoomInner"></div>
 </div>
 
@@ -2987,8 +2988,9 @@ function renderCard(v, extraClass='', statsOverride=null, domId=null){
       : (v.sick ? `<span class="tag">${wrapKw('SICK','sick')}</span>` : (v.attacked ? `<span class="tag">${wrapKw('SPENT','spent')}</span>` : ''));
     const atk = statsOverride ? statsOverride.atk : v.atk;
     const def = statsOverride ? statsOverride.def : v.def;
-    const modified = statsOverride && (atk!==v.atk || def!==v.def);
-    statsHtml = `<div class="ecStats${modified?' mod':''}">${atk} / ${def}</div>`;
+    // A stat that differs from the printed value (buffed OR debuffed) is shown in yellow.
+    const sCls = (now, base) => now>base ? ' statMod statUp' : (now<base ? ' statMod statDown' : '');
+    statsHtml = `<div class="ecStats"><span class="statNum${sCls(atk,v.atk)}">${atk}</span> / <span class="statNum${sCls(def,v.def)}">${def}</span></div>`;
     if(isMechanicallyInert(v.name)) inertNote = `<span class="inert">(this effect can't function in this prototype — see notes)</span>`;
   }
   const flavour = CARD_FLAVOUR[v.name] ? `<span class="ecFlavour">${CARD_FLAVOUR[v.name]}</span>` : '';
@@ -3009,7 +3011,12 @@ function zoomCard(id){
   const card = cardRegistry[id];
   if(!card) return;
   const inner = document.getElementById('cardZoomInner');
-  inner.innerHTML = `<button id="cardZoomClose" onclick="hideCardZoom()">✕</button>` + renderCard(card);
+  // A Vessel on the board is shown with its live stats (auras, Realm, temp buffs), same as on the board.
+  let eff = null;
+  if(card.type==='Vessel' && state && state.players){
+    state.players.forEach((p,pi)=>{ (p.front||[]).forEach((v,ci)=>{ if(v && v.id===card.id) eff = getEffectiveStats(pi,ci); }); });
+  }
+  inner.innerHTML = renderCard(card, '', eff);
   document.getElementById('cardZoomOverlay').classList.add('open');
 }
 function hideCardZoom(){
