@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Enscra Codex</title>
+<meta name="theme-color" content="#07070f">
+<meta name="description" content="The world codex of Enscra">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-height app shell — glass sidebar + content over a living themed backdrop, radio docked at the bottom */
+:root{
+  color-scheme:dark;
+  --bg:#07070f; --panel:rgba(16,16,30,.62); --panel-solid:#12121f; --line:rgba(200,205,230,.14);
+  --fg:#e9eaf4; --muted:#9a9cb6; --silver:#cfd3e6;
+  --accent:#b9c2ff; --accent-2:#7d86d8; --glow:rgba(150,160,255,.28);
+  --gem-red:#ff6a4a; --gem-green:#5fd08a; --gem-blue:#4aa8ff; --gem-white:#e8eef7; --gem-purple:#a66bff;
+  --f-display:"Marcellus",Georgia,"Times New Roman",serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --radius:14px;
+}
+body[data-bg="ember"]{--accent:#ffb08a;--accent-2:#e2603a;--glow:rgba(255,110,60,.28);--bg:#0e0706}
+body[data-bg="verdant"]{--accent:#a9efc0;--accent-2:#3fae6b;--glow:rgba(80,210,130,.24);--bg:#050c08}
+body[data-bg="tide"]{--accent:#9fd2ff;--accent-2:#2f86d6;--glow:rgba(70,160,255,.26);--bg:#040912}
+body[data-bg="gale"]{--accent:#f2f5fb;--accent-2:#a9b6c9;--glow:rgba(230,238,250,.2);--bg:#0b0d12}
+body[data-bg="void"]{--accent:#d4b5ff;--accent-2:#8b4fe0;--glow:rgba(160,100,255,.3);--bg:#08050f}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;overflow:hidden;transition:background .6s}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.app{position:relative;z-index:1;height:100%;display:grid;grid-template-columns:248px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.glass{background:var(--panel);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border:1px solid var(--line)}
+
+/* sidebar */
+.side{grid-row:1;margin:14px 0 14px max(14px,env(safe-area-inset-left,0px));border-radius:var(--radius);display:flex;flex-direction:column;gap:18px;padding:20px 14px;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.brand svg{flex:none}
+.brand b{font-family:var(--f-display);font-weight:400;font-size:22px;letter-spacing:.06em}
+.brand small{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.search input{flex:1;min-width:0;background:none;border:0;color:var(--fg);font:inherit;font-size:14px;outline:none}
+.navlabel{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:0 8px;margin-bottom:6px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;border-radius:9px;color:var(--muted);font-weight:500;font-size:14px;transition:background .2s,color .2s}
+.nav button:hover{background:rgba(255,255,255,.05);color:var(--fg)}
+.nav button[aria-current="true"]{background:linear-gradient(90deg,var(--glow),transparent);color:var(--fg)}
+.nav .count{margin-left:auto;font-family:var(--f-mono);font-size:11px;opacity:.7}
+.gems{display:flex;gap:7px;padding:0 8px;margin-top:auto}
+.gem{width:10px;height:10px;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 8px currentColor}
+.side-foot{display:flex;gap:8px}
+.chip-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:13px;font-weight:600}
+.chip-btn:hover{border-color:var(--accent)}
+
+/* main */
+.main{grid-row:1;overflow:auto;padding:14px max(14px,env(safe-area-inset-right,0px)) 14px 14px}
+.view{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:18px 6px 4px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,4.4vw,46px);line-height:1.05;margin:6px 0 0;text-wrap:balance;letter-spacing:.01em}
+.sub{color:var(--muted);max-width:58ch;margin:8px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{border-radius:var(--radius);overflow:hidden;text-align:left;display:flex;flex-direction:column;transition:transform .25s,border-color .25s,box-shadow .25s}
+.card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 50%,transparent);box-shadow:0 12px 40px -12px var(--glow)}
+.sigil{aspect-ratio:16/9;max-width:100%;position:relative;display:grid;place-items:center;overflow:hidden}
+.sigil span{font-family:var(--f-display);font-size:44px;color:rgba(255,255,255,.88);text-shadow:0 0 24px rgba(255,255,255,.35)}
+.card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.card-body h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:19px}
+.card-body p{margin:0;color:var(--muted);font-size:13.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--silver);background:rgba(255,255,255,.03)}
+.tag.kind{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+
+/* detail */
+.detail{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+.panel{border-radius:var(--radius);padding:20px}
+.panel h2{font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.hero-sigil{border-radius:var(--radius);aspect-ratio:21/8;max-width:100%}
+.hero-sigil span{font-size:64px}
+.hero-sigil.art{aspect-ratio:16/8}
+.prose p{margin:0 0 12px;max-width:65ch}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0;font-size:14px}
+.facts dt{color:var(--muted);font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;padding-top:2px}
+.facts dd{margin:0}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;font-weight:600}
+.back:hover{color:var(--fg)}
+.graph{width:100%;height:auto;display:block}
+.graph text{fill:var(--fg);font-family:var(--f-body);font-size:11px}
+.graph .rel{fill:var(--muted);font-family:var(--f-mono);font-size:9px}
+.graph g.node{cursor:pointer}
+.graph g.node:hover circle{stroke:var(--accent)}
+.empty{color:var(--muted);padding:40px 6px}
+
+/* radio */
+.radio{grid-column:1/-1;grid-row:2;margin:0 max(14px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));border-radius:var(--radius);display:flex;align-items:center;gap:14px;padding:10px 14px;flex-wrap:wrap}
+.disc{width:42px;height:42px;border-radius:50%;flex:none;background:conic-gradient(from 0deg,var(--accent-2),var(--accent),var(--accent-2));display:grid;place-items:center;box-shadow:0 0 18px var(--glow)}
+.disc::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--panel-solid);border:1px solid var(--line)}
+.radio.playing .disc{animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.np{min-width:0;flex:1 1 180px}
+.np small{font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.np div{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np em{font-style:normal;color:var(--muted);font-size:12.5px}
+.ctrls{display:flex;align-items:center;gap:4px}
+.ib{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--fg)}
+.ib:hover{background:rgba(255,255,255,.07)}
+.ib.big{width:42px;height:42px;background:var(--accent);color:#0a0a14}
+.ib.big:hover{background:var(--accent);filter:brightness(1.1)}
+.bars{display:flex;align-items:flex-end;gap:2px;height:26px;width:64px}
+.bars i{flex:1;background:var(--accent);opacity:.75;border-radius:1px;height:8%}
+.vol{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.vol input{width:90px;accent-color:var(--accent)}
+.stations-btn{font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:99px;border:1px solid var(--line)}
+.stations-btn:hover{border-color:var(--accent)}
+
+/* drawers */
+.scrim{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45)}
+.drawer{position:fixed;z-index:21;right:max(14px,env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:min(380px,calc(100% - 28px));border-radius:var(--radius);background:color-mix(in srgb,var(--panel-solid) 88%,transparent);padding:20px;overflow:auto;display:flex;flex-direction:column;gap:18px;animation:slide .3s ease}
+@keyframes slide{from{transform:translateX(20px);opacity:0}}
+.drawer header{display:flex;justify-content:space-between;align-items:center}
+.drawer h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:24px}
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.theme{border-radius:12px;overflow:hidden;border:1px solid var(--line);text-align:left}
+.theme[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 20px -4px var(--glow)}
+.theme .sw{height:64px;max-width:100%}
+.theme div{padding:8px 10px;font-size:13px;font-weight:600}
+.theme div small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.slist{display:flex;flex-direction:column;gap:6px}
+.st{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);text-align:left}
+.st[aria-pressed="true"]{border-color:var(--accent);background:rgba(255,255,255,.04)}
+.st b{font-weight:600;display:block;font-size:14px}
+.st small{color:var(--muted);font-size:12px}
+.upload{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--muted)}
+.upload label{align-self:flex-start;padding:8px 12px;border-radius:9px;background:var(--accent);color:#0a0a14;font-weight:700;cursor:pointer}
+.upload input{position:absolute;width:1px;height:1px;opacity:0}
+.toggle{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.toggle input{accent-color:var(--accent);width:18px;height:18px}
+
+/* connections graph */
+.graphwrap{position:relative;border-radius:var(--radius);height:min(72vh,700px);min-height:420px;overflow:hidden;touch-action:none}
+.graphwrap canvas{display:block;cursor:grab;touch-action:none}
+.gchips{position:absolute;top:12px;left:12px;right:110px;display:flex;flex-wrap:wrap;gap:6px}
+.gchips button{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel-solid) 80%,transparent);font-size:12px;font-weight:600;color:var(--muted)}
+.gchips button[aria-pressed="true"]{color:var(--fg);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.gchips i{width:9px;height:9px;border-radius:50%;display:block}
+.gchips button[aria-pressed="false"] i{opacity:.3}
+.grecenter{position:absolute;top:12px;right:12px;padding:5px 12px;border-radius:99px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel-solid) 80%,transparent);font-size:12px;font-weight:600}
+.grecenter:hover{border-color:var(--accent)}
+/* companion orb */
+.orb-fab{position:fixed;z-index:15;right:calc(22px + env(safe-area-inset-right,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));width:68px;height:68px;border-radius:50%;display:grid;place-items:center;transition:transform .25s}
+.orb-fab:hover{transform:scale(1.07)}
+.orb-fab{background:color-mix(in srgb,var(--panel-solid) 70%,transparent);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.orb-fab canvas{width:72px;height:72px;display:block}
+.orb-stage{display:grid;place-items:center;padding:4px 0}
+.orb-stage canvas{width:280px;height:280px;max-width:100%;display:block}
+.orb-state{text-align:center;font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-top:-6px}
+.states{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.states button{padding:10px;border-radius:10px;border:1px solid var(--line);font-size:13.5px;font-weight:600;text-align:left}
+.states button small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.states button[aria-pressed="true"]{border-color:var(--accent);background:rgba(255,255,255,.05)}
+.eqm{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:end}
+.eqm div{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.eqm i{display:block;width:100%;height:46px;border-radius:6px;background:rgba(255,255,255,.05);position:relative;overflow:hidden}
+.eqm b{position:absolute;left:0;right:0;bottom:0;height:4%;border-radius:6px 6px 0 0}
+.eqm span{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.06em;color:var(--muted);text-align:center;line-height:1.2}
+.states button:last-child:nth-child(odd){grid-column:1/-1}
+.orb-note{font-size:13px;color:var(--muted);margin:0}
+.fake-input{display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:12px;border:1px solid var(--line);color:var(--muted);font-size:13.5px;opacity:.7}
+
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+  .side{grid-row:1;margin:10px max(10px,env(safe-area-inset-right,0px)) 0 max(10px,env(safe-area-inset-left,0px));flex-direction:row;flex-wrap:wrap;gap:10px;padding:12px;align-items:center}
+  .brand{flex:1}
+  .search{order:3;flex-basis:100%}
+  .navwrap{order:4;flex-basis:100%;overflow-x:auto}
+  .navlabel,.gems,.side-foot .lbl{display:none}
+  .nav{flex-direction:row}
+  .nav button{white-space:nowrap;width:auto}
+  .side-foot{order:2}
+  .chip-btn{padding:8px 10px}
+  .main{grid-row:2;padding:10px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px))}
+  .detail{grid-template-columns:minmax(0,1fr)}
+  .radio{grid-row:3;margin:0 max(10px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));gap:10px}
+  .vol,.bars{display:none}
+}
+/* ================= colour skins: same layout, different edges + motion ================= */
+@property --vang{syntax:"<angle>";inherits:false;initial-value:0deg}
+.card,.panel,.radio,.graphwrap,.side,.drawer,.search,.tag,.chip-btn,.theme,.st,.states button,.stations-btn,.hero-sigil,.nav button{transition:border-radius .5s ease,border-color .5s,box-shadow .4s,transform .25s,background .3s,color .2s}
+body[data-bg] :is(.card,.panel,.radio,.graphwrap,.side){position:relative}
+body[data-bg] :is(.card,.panel,.radio,.graphwrap,.side)::before,
+body[data-bg] :is(.card,.panel,.radio,.graphwrap,.side)::after{content:none;position:absolute;pointer-events:none;z-index:3}
+/* shared trick: gradient border that follows the corner shape */
+body:is([data-bg="ember"],[data-bg="verdant"],[data-bg="void"]) :is(.card,.panel,.radio,.graphwrap,.side)::before{
+  content:"";inset:0;border-radius:inherit;padding:1.5px;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+
+/* ---- RED · Emberfall: forged plates, riveted corner brackets, flickering heat edge ---- */
+body[data-bg="ember"]{--radius:4px}
+body[data-bg="ember"] .glass{border-color:rgba(255,140,90,.12)}
+body[data-bg="ember"] :is(.card,.panel,.radio,.graphwrap,.side)::before{
+  background:linear-gradient(180deg,rgba(255,120,60,.05),rgba(226,96,58,.35) 60%,var(--accent));animation:emberFlicker 2.8s steps(1) infinite}
+body[data-bg="ember"] :is(.card,.panel,.radio,.graphwrap,.side)::after{content:"";inset:5px;
+  --b:linear-gradient(var(--accent),var(--accent));
+  background:var(--b) top left/12px 2px,var(--b) top left/2px 12px,var(--b) top right/12px 2px,var(--b) top right/2px 12px,
+    var(--b) bottom left/12px 2px,var(--b) bottom left/2px 12px,var(--b) bottom right/12px 2px,var(--b) bottom right/2px 12px;
+  background-repeat:no-repeat;opacity:.55}
+@keyframes emberFlicker{0%,100%{opacity:1}17%{opacity:.7}21%{opacity:.95}46%{opacity:.8}52%{opacity:1}78%{opacity:.75}83%{opacity:.95}}
+body[data-bg="ember"] .card:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 18px 30px -14px rgba(255,90,40,.55),0 0 0 1px rgba(255,140,90,.3)}
+body[data-bg="ember"] .card:hover::after{opacity:1}
+body[data-bg="ember"] .nav button[aria-current="true"]{background:linear-gradient(90deg,rgba(255,110,60,.28),transparent);box-shadow:inset 3px 0 0 var(--accent-2);border-radius:2px}
+body[data-bg="ember"] :is(.search,.chip-btn,.theme,.st,.states button){border-radius:3px}
+body[data-bg="ember"] :is(.tag,.stations-btn){border-radius:2px}
+body[data-bg="ember"] .drawer{animation:emberRise .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes emberRise{0%{transform:translateY(26px);opacity:0;filter:brightness(1.8) saturate(1.4)}60%{filter:brightness(1.2)}100%{filter:none}}
+body[data-bg="ember"] .view>*{animation:emberIn .35s ease both}
+@keyframes emberIn{from{transform:translateY(10px);opacity:0;filter:brightness(1.6)}}
+
+/* ---- GREEN · Verdant Root: leaf-cut corners, breathing moss edge, slow sway ---- */
+body[data-bg="verdant"]{--radius:22px 5px 22px 5px}
+body[data-bg="verdant"] .glass{border-color:transparent}
+body[data-bg="verdant"] :is(.card,.panel,.radio,.graphwrap,.side)::before{
+  background:linear-gradient(135deg,var(--accent) 0%,rgba(63,174,107,.15) 35%,rgba(63,174,107,.1) 65%,var(--accent-2) 100%);animation:breathe 5s ease-in-out infinite}
+body[data-bg="verdant"] :is(.card,.panel,.radio,.graphwrap,.side)::after{content:"";left:0;bottom:0;width:70px;height:70px;border-radius:0 0 0 5px;
+  background:radial-gradient(circle at 0 100%,rgba(140,230,160,.22),transparent 70%)}
+@keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
+body[data-bg="verdant"] .drawer{border-radius:26px 6px 26px 6px;border-color:rgba(169,239,192,.25);animation:unfurl .55s cubic-bezier(.3,1.3,.5,1);transform-origin:top right}
+@keyframes unfurl{from{transform:scale(.92) rotate(-1.5deg);opacity:0}}
+body[data-bg="verdant"] .card:hover{transform:translateY(-3px) rotate(-.6deg);box-shadow:0 14px 34px -14px rgba(80,210,130,.45)}
+body[data-bg="verdant"] .card:nth-child(even):hover{transform:translateY(-3px) rotate(.6deg)}
+body[data-bg="verdant"] .nav button[aria-current="true"]{border-radius:14px 3px 14px 3px}
+body[data-bg="verdant"] :is(.search,.chip-btn,.theme,.st,.states button){border-radius:16px 4px 16px 4px}
+body[data-bg="verdant"] :is(.tag,.stations-btn){border-radius:10px 2px 10px 2px}
+body[data-bg="verdant"] .hero-sigil{border-radius:40px 8px 40px 8px}
+body[data-bg="verdant"] .view>*{animation:sprout .6s cubic-bezier(.3,1.25,.5,1) both}
+@keyframes sprout{from{transform:translateY(14px) scale(.98);opacity:0}}
+
+/* ---- BLUE · Undertide: deep rounded hulls, waterline along the bottom, bobbing motion ---- */
+body[data-bg="tide"]{--radius:24px}
+body[data-bg="tide"] .glass{border-color:rgba(159,210,255,.14);box-shadow:inset 0 1px 0 rgba(159,210,255,.12)}
+body[data-bg="tide"] :is(.card,.panel,.radio,.graphwrap,.side){overflow:hidden}
+body[data-bg="tide"] .side{overflow:auto}
+body[data-bg="tide"] :is(.card,.panel,.radio,.graphwrap,.side)::after{content:"";left:0;right:0;bottom:0;height:10px;opacity:.55;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='10'%3E%3Cpath d='M0 6 Q20 0 40 6 T80 6' fill='none' stroke='%239fd2ff' stroke-width='1.2'/%3E%3Cpath d='M0 6 Q20 0 40 6 T80 6 V10 H0Z' fill='%232f86d6' fill-opacity='.18'/%3E%3C/svg%3E") repeat-x 0 0/80px 10px;
+  animation:tideRoll 4s linear infinite}
+body[data-bg="tide"] :is(.card,.panel,.radio,.graphwrap,.side)::before{content:"";left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(190,225,255,.7),transparent) no-repeat;background-size:40% 100%;animation:shimmer 7s ease-in-out infinite}
+@keyframes tideRoll{to{background-position-x:80px}}
+@keyframes shimmer{0%{background-position:-60% 0}100%{background-position:160% 0}}
+body[data-bg="tide"] .card:hover{transform:none;animation:bob 2.4s ease-in-out infinite;box-shadow:0 16px 40px -14px rgba(70,160,255,.5)}
+@keyframes bob{0%,100%{transform:translateY(-2px)}50%{transform:translateY(-6px)}}
+body[data-bg="tide"] .drawer{border-radius:28px;animation:tideIn .7s cubic-bezier(.34,1.56,.64,1)}
+@keyframes tideIn{0%{transform:translateX(60px);opacity:0}100%{transform:none;opacity:1}}
+body[data-bg="tide"] .nav button[aria-current="true"]{border-radius:99px}
+body[data-bg="tide"] :is(.search,.chip-btn,.theme,.st,.states button){border-radius:20px}
+body[data-bg="tide"] .view>*{animation:surface .7s cubic-bezier(.34,1.4,.64,1) both}
+@keyframes surface{from{transform:translateY(22px);opacity:0}}
+
+/* ---- WHITE · Pale Gale: knife-sharp corners, open sides, wind streaks running the edges ---- */
+body[data-bg="gale"]{--radius:0px}
+body[data-bg="gale"] .glass{border-color:rgba(242,245,251,.28) transparent;border-left-color:rgba(242,245,251,.04);border-right-color:rgba(242,245,251,.04)}
+body[data-bg="gale"] :is(.card,.panel,.radio,.graphwrap,.side)::before,
+body[data-bg="gale"] :is(.card,.panel,.radio,.graphwrap,.side)::after{content:"";left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,#fff,transparent) no-repeat;background-size:30% 100%;animation:gust 3.2s cubic-bezier(.6,0,.4,1) infinite}
+body[data-bg="gale"] :is(.card,.panel,.radio,.graphwrap,.side)::before{top:0}
+body[data-bg="gale"] :is(.card,.panel,.radio,.graphwrap,.side)::after{bottom:0;animation-delay:1.1s;animation-duration:4.1s;opacity:.6}
+@keyframes gust{0%{background-position:-40% 0}60%,100%{background-position:140% 0}}
+body[data-bg="gale"] .card:hover{transform:translateX(5px);box-shadow:-10px 0 30px -18px rgba(240,245,255,.6)}
+body[data-bg="gale"] .drawer{border-radius:0;border-color:rgba(242,245,251,.3) transparent;animation:galeIn .28s cubic-bezier(.2,.9,.1,1)}
+@keyframes galeIn{from{transform:translateX(80px) skewX(-6deg);opacity:0;filter:blur(6px)}}
+body[data-bg="gale"] .nav button{border-radius:0}
+body[data-bg="gale"] .nav button[aria-current="true"]{background:linear-gradient(90deg,rgba(240,245,255,.16),transparent);box-shadow:inset 0 -1px 0 rgba(240,245,255,.5)}
+body[data-bg="gale"] :is(.search,.chip-btn,.theme,.st,.states button,.tag,.stations-btn,.hero-sigil){border-radius:0}
+body[data-bg="gale"] .view>*{animation:sweep .35s cubic-bezier(.2,.9,.1,1) both}
+@keyframes sweep{from{transform:translateX(-24px);opacity:0;filter:blur(3px)}}
+
+/* ---- PURPLE · The Void: orbiting shadow ring around every edge, things sink in rather than lift ---- */
+body[data-bg="void"]{--radius:16px}
+body[data-bg="void"] .glass{border-color:transparent;box-shadow:inset 0 0 30px -10px rgba(120,60,220,.35)}
+body[data-bg="void"] :is(.card,.panel,.radio,.graphwrap,.side)::before{
+  background:conic-gradient(from var(--vang),transparent 0 55%,rgba(139,79,224,.6) 70%,var(--accent) 78%,rgba(200,60,160,.5) 84%,transparent 92%);
+  animation:orbit 9s linear infinite}
+body[data-bg="void"] .card:nth-child(3n+1)::before{animation-duration:11s}
+body[data-bg="void"] .card:nth-child(3n+2)::before{animation-duration:7s;animation-direction:reverse}
+@keyframes orbit{to{--vang:360deg}}
+body[data-bg="void"] .card:hover{transform:scale(.985);box-shadow:inset 0 0 40px -6px rgba(160,100,255,.45),0 0 30px -10px rgba(160,100,255,.6)}
+body[data-bg="void"] .card:hover::before{animation-duration:2.5s}
+body[data-bg="void"] .drawer{border-color:rgba(212,181,255,.2);animation:voidIn .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes voidIn{from{transform:scale(1.06);opacity:0;filter:blur(10px)}}
+body[data-bg="void"] .nav button[aria-current="true"]{background:radial-gradient(ellipse at left,rgba(160,100,255,.35),transparent 70%)}
+body[data-bg="void"] :is(.tag,.stations-btn){border-radius:99px}
+body[data-bg="void"] .view>*{animation:emerge .6s ease both}
+@keyframes emerge{from{transform:scale(1.03);opacity:0;filter:blur(8px)}}
+
+body[data-bg] .view>.graphwrap{animation:none}
+/* staggered entrance so content arrives in the theme's style */
+.view>*:nth-child(2){animation-delay:.05s}.view>*:nth-child(3){animation-delay:.1s}.view>*:nth-child(4){animation-delay:.15s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head><body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="app">
+  <aside class="side glass">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 2 L26 15 L15 28 L4 15Z" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".8"/><path d="M15 8 L21 15 L15 22 L9 15Z" fill="var(--accent)"/></svg>
+      <div><b>Enscra</b><small>World codex</small></div>
+    </div>
+    <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search the codex" aria-label="Search entries"></div>
+    <div class="navwrap"><div class="navlabel">Codex</div><nav class="nav" id="nav"></nav></div>
+    <div class="gems" aria-label="The five colours" id="gems"></div>
+    <div class="side-foot">
+      <button class="chip-btn" id="openThemes" aria-label="Change background"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg><span class="lbl">Backdrop</span></button>
+    </div>
+  </aside>
+
+  <main class="main" id="main"><div class="view" id="view"></div></main>
+
+  <section class="radio glass" id="radio" aria-label="Codex radio">
+    <div class="disc" aria-hidden="true"></div>
+    <div class="np"><small>Codex Radio</small><div id="npTitle">Red · Fire</div><em id="npSub">Press play</em></div>
+    <div class="bars" id="bars" aria-hidden="true"></div>
+    <div class="ctrls">
+      <button class="ib" id="prev" aria-label="Previous station"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="ib big" id="play" aria-label="Play"><svg id="playIco" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></button>
+      <button class="ib" id="next" aria-label="Next station"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+    </div>
+    <label class="vol"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/></svg><input id="vol" type="range" min="0" max="1" step="0.01" value="0.55" aria-label="Volume"></label>
+    <button class="stations-btn" id="openStations">Stations</button>
+  </section>
+</div>
+
+<button class="orb-fab" id="orbFab" aria-label="Open companion"><canvas id="orbSmall" width="144" height="144"></canvas></button>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer glass" id="orbDrawer" hidden aria-label="Companion">
+  <header><h3>Companion</h3><button class="ib" data-close aria-label="Close">✕</button></header>
+  <div class="orb-stage"><canvas id="orbBig" width="560" height="560"></canvas></div>
+  <div class="orb-state" id="orbStateLabel">Idle</div>
+  <div class="eqm" id="eqMeters"></div>
+  <div class="states" id="orbStates"></div>
+  <p class="orb-note">Each colour follows one EQ band of the music. Blue covers the vocal range, so it moves with singing, but also with anything else pitched there, like guitars or synth leads. Play the radio and the orb moves with the music. Later it will move with your voice and its own.</p>
+  <div class="fake-input"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Voice and chat coming soon</div>
+</aside>
+<aside class="drawer glass" id="themeDrawer" hidden aria-label="Backdrops">
+  <header><h3>Backdrop</h3><button class="ib" data-close aria-label="Close">✕</button></header>
+  <div class="themes" id="themes"></div>
+  <label class="toggle">Animate backdrop <input type="checkbox" id="animToggle" checked></label>
+</aside>
+<aside class="drawer glass" id="stationDrawer" hidden aria-label="Radio stations">
+  <header><h3>Stations</h3><button class="ib" data-close aria-label="Close">✕</button></header>
+  <label class="toggle">Match backdrop to colour tracks <input type="checkbox" id="syncBg" checked></label>
+  <div class="slist" id="slist"></div>
+  <div class="upload">
+    <b style="color:var(--fg)">Your own tracks</b>
+    Add songs from your device (your Suno tracks work). They play in this session only.
+    <label for="files">Add audio files</label><input id="files" type="file" accept="audio/*" multiple>
+  </div>
+</aside>
+
+<script>
+/* ---------- data (from Charlie's Enscra notes) ---------- */
+const KINDS={character:"Characters",place:"Places",faction:"Factions",item:"Artefacts",lore:"Lore"};
+const E=[
+ /* ---- characters ---- */
+ {id:"sera",kind:"character",name:"Sera Calloway",img:"art/sera.jpg",pos:"62% 22%",hue:[8,140],region:"Vorra",tags:["Protagonist","Dueller","Red hair, green eyes"],
+  sum:"Vorra orphan, noodle delivery rider and secret underground dueller who finds an ancient tile card.",
+  body:["Orphaned young and taken in by her aunt Nora and uncle Mave, who was the closest thing she had to a father. After Mave's supposed death, Nora raised her alone in a rundown flat near a Vorra excavation district. By day she delivers for Pit Stop Noodles on a hoverbike she built herself. Three nights a week she duels in illegal underground rings, and the extra money she brings home she blames on generous tippers.",
+   "She has no formal training. Her style is instinctive and unconventional, built from years of surviving the rings, and she reads her opponent before they play. Street smart, cautious, observant, with a reckless streak. A survivor rather than a natural hero.",
+   "On a delivery to a mining site she finds an ancient tile in the miners' scrap. Restoring its faded engravings connects her to the original language of written magic. Ancient cards respond more strongly in her hands, and she slowly learns to read the lost symbols, hiding her research inside the drawings of the sketchbook she has carried since childhood.",
+   "After winning an alley duel against a gang member, she is recruited by the good organisation and placed undercover at Sorene Academy, with Edric Clay as her handler."],
+  facts:{Role:"Protagonist",Home:"Vorra",Look:"Red hair, green eyes",Work:"Pit Stop Noodles",Ride:"Self-built hoverbike",Carries:"Her sketchbook",Academy:"Standard Tier, undercover"},
+  links:[["nora","aunt"],["mave","uncle"],["isolde","rival"],["edric","handler"],["goodorg","agent"],["tile","found"],["academy","undercover"],["pitstop","rides for"]]},
+ {id:"isolde",kind:"character",name:"Isolde Mourne",img:"art/isolde.jpg",pos:"66% 22%",hue:[220,300],region:"Valderia",tags:["Rival","Elite Tier","Noble"],
+  sum:"Elite Tier noble who loses to Sera in public, then sets out to ruin her and get her out of the academy.",
+  body:["From an old Valderian noble family whose name has been tied to Sorene Academy for generations, with a tradition of producing top duellists. She carries the family legacy, not just her own ambition.",
+   "Before Sera arrives she is top of the Elite Tier: composed, precise and coldly dismissive of anyone beneath her, complacent because no one has ever really challenged her.",
+   "Then she loses to Sera in the academy tournament, in front of everyone. Her peers mock her for losing to a commoner scholarship student. The cold superiority cracks into wounded pride and obsession, and she uses her Elite connections, money and influence to undermine Sera socially and academically.",
+   "The villain organisation offers her forbidden cards strong enough to guarantee a public win over Sera. She accepts without understanding the price, and becomes complicit in something far darker than an academy rivalry. Not simply evil: sympathetic motive, increasingly dangerous methods."],
+  facts:{Say:"ih-SOLD",Role:"Rival",Tier:"Elite",Origin:"Old Valderian nobility",Turn:"Takes forbidden cards"},
+  links:[["sera","rival"],["academy","Elite Tier"],["valderia","origin"],["villainorg","recruited by"]]},
+ {id:"nora",kind:"character",name:"Nora",img:"art/nora.jpg",pos:"60% 20%",hue:[30,200],region:"Vorra",tags:["Family","Aunt"],
+  sum:"Sera's aunt, who took her in and raised her alone while grieving Mave.",
+  body:["Not Sera's biological family. She and her partner Mave took Sera in as a young orphan, and after losing Mave she raised her alone, working long early shifts at a fuel station near their flat.",
+   "Warm, hardworking and quietly perceptive. She suspects Sera's extra money isn't all tips, but loves her too much to push.",
+   "She lost her partner Mave years ago, or believes she did. The good organisation later moves her to a safer flat under the cover of a scholarship relocation package for Sera. She thinks Sera simply got lucky and knows nothing of the truth."],
+  facts:{Relation:"Sera's aunt",Partner:"Mave",Work:"Fuel station",Home:"Vorra"},
+  links:[["sera","niece"],["mave","partner"],["vorra","home"]]},
+ {id:"mave",kind:"character",name:"Mave",img:"art/mave.jpg",pos:"62% 20%",hue:[280,330],region:"Exiled",tags:["Family","Cursed"],
+  sum:"Sera's uncle and father figure, Nora's partner. Believed dead, but alive, cursed and exiled.",
+  body:["Nora's partner, and the uncle who helped raise Sera. The closest thing she ever had to a father.","Mave stumbled onto the villain organisation's illegal activity near Vorra's excavation sites. Rather than kill him, they used a forbidden curse to exile him: a seal that bars him from going near cards or card-regulated spaces.",
+   "The good organisation told Nora he had died, to contain the situation. Nobody knows where he is, because the curse prevents tracking.",
+   "Sera finds out the truth when she sees his face in the good organisation's database of curse victims, recognising him from photographs at Nora's flat. Finding him becomes part of her deal for joining. He may have had the same latent connection to ancient magic that Sera has."],
+  facts:{Relation:"Sera's uncle, Nora's partner",Role:"Sera's father figure",Status:"Alive, presumed dead",Fate:"Curse of exile",Whereabouts:"Unknown"},
+  links:[["nora","partner"],["sera","niece"],["curse","victim of"],["villainorg","cursed by"]]},
+ {id:"edric",kind:"character",name:"Edric Clay",img:"art/edric2.jpg",pos:"50% 19%",hue:[150,230],region:"Valderia",tags:["Headmaster","Covert"],
+  sum:"Stern headmaster of Sorene Academy and secretly a senior figure in the good organisation.",
+  body:["Outwardly stern, formal and controlled, keeping a professional distance from every student. Privately one of the few who sees Sera's ability straight away and respects it.",
+   "He is her only contact in the academy who knows the truth. Their meetings are disguised as routine academic or disciplinary summons, so other students assume she is always in trouble."],
+  facts:{Public:"Headmaster",Covert:"Good organisation",Role:"Sera's handler"},
+  links:[["academy","heads"],["sera","handles"],["goodorg","senior figure"]]},
+ {id:"sorene",kind:"character",name:"Sorene",img:"art/sorene2.jpg",pos:"55% 18%",hue:[45,320],region:"Valderia",tags:["Founder","Legend","Never shown"],
+  sum:"The most powerful magic writer of her era, who regulated written magic and founded the academy.",
+  body:["Centuries before the story, she watched unrestricted written magic tearing the world apart. With power enough to command every continental leader's respect, she brought them together and presented the regulated card system.",
+   "Once it was in place she gave up unrestricted magic herself, refusing to ask the world to surrender something she still used. Statues of her line Valderia's streets and the academy that bears her name is treated as sacred.",
+   "She is never depicted, only referenced. The irony at the heart of the story: Sera is rediscovering the very magic Sorene banned, inside the academy named after her."],
+  facts:{Era:"Centuries ago",Depicted:"Never",Legacy:"Regulated card magic"},
+  links:[["academy","founded"],["writtenmagic","regulated"],["valderia","statues"]]},
+
+ /* ---- places ---- */
+ {id:"vorra",kind:"place",name:"Vorra",hue:[25,280],region:"Continent",tags:["Underground","Steampunk","Excavation"],
+  sum:"A civilisation built down into the earth beneath a harsh mountain surface. Sera's home.",
+  body:["Cavern cities lit by glowing fungi, brass and copper steam machinery, and mechanical lifts connecting levels deep underground. Old and futuristic at once.",
+   "Self-built, rough and fiercely proud. It holds the highest concentration of ancient tile cards ever found, and a whole excavation economy has grown around them. Rundown districts sit near the dig sites, where families live beside the industry without sharing its wealth."],
+  facts:{Type:"Continent",Known:"Ancient tile excavation"},
+  links:[["sera","home of"],["nora","home of"],["expansionists","faction"],["preservationists","faction"],["pitstop","hosts"]]},
+ {id:"valderia",kind:"place",name:"Valderia",hue:[45,210],region:"Continent",tags:["Founding","Marble","Tradition"],
+  sum:"The oldest civilisation: white marble, gold trim and statues of Sorene. Home of the academy.",
+  body:["Grand marble architecture and duelling colosseums that double as monuments. Deeply traditional and ceremonial, with a sharp divide between old noble families and everyone else.",
+   "Historically the most powerful continent and still the cultural authority of Enscra, though Rathmore's new wealth challenges that."],
+  facts:{Type:"Continent",Home:"Sorene Academy"},
+  links:[["academy","home of"],["isolde","origin of"],["sorene","statues"],["rathmore","rivalry"]]},
+ {id:"rathmore",kind:"place",name:"Rathmore",hue:[0,30],region:"Continent",tags:["Empire","Industry","New money"],
+  sum:"Overlooked for centuries, until its land proved vital to card production. Now an empire.",
+  body:["Heavy, functional architecture, with newer wealth gleaming over a working-class frame. It leverages the world's dependence on its resources aggressively and is now economically and militarily dominant.",
+   "Its merchant families fund ancient card hunts in Vorra, and it carries a deep resentment toward Valderia's old establishment."],
+  facts:{Type:"Continent",Power:"Economic and military"},
+  links:[["valderia","rivalry"],["vorra","funds hunts"]]},
+ {id:"strathenor",kind:"place",name:"Strathenor",hue:[190,250],region:"Continent",tags:["Knowledge","Vertical city"],
+  sum:"A vertical city of research towers, where every major magical breakthrough begins.",
+  body:["Built on top of itself for centuries, with trains threading through buildings and research towers over everything. Precise, intellectual and the most diverse continent.",
+   "Everyone needs what it produces, which makes it quietly the most influential. Its researchers studying Vorra's ancient sites make the Preservationists uneasy."],
+  facts:{Type:"Continent",Known:"Research and knowledge"},
+  links:[["vorra","studies"],["preservationists","tension"]]},
+ {id:"academy",kind:"place",name:"Sorene Academy",hue:[45,200],region:"Valderia",tags:["Academy","Tiers"],
+  sum:"The most prestigious duelling academy in the world, split into Elite and Standard tiers.",
+  body:["Founded by Sorene to teach the regulated system and treated as sacred ground. Its administrative body is secretly the public face of the good organisation, and nobody inside knows it.",
+   "Sera is placed in the Standard Tier under a fabricated scholarship story. With no background or connections, she is an enigma to everyone, and her constant summons to the headmaster make people think she is always in trouble."],
+  facts:{Head:"Edric Clay",Location:"Valderia"},
+  links:[["edric","headmaster"],["sera","student"],["isolde","student"],["tiers","system"],["sorene","namesake"]]},
+ {id:"pitstop",kind:"place",name:"Pit Stop Noodles",hue:[12,48],region:"Vorra",tags:["Takeaway"],
+  sum:"The noodle takeaway Sera delivers for. Its name is on her hoverbike's delivery box.",
+  body:["Sera's day job and her cover. The deliveries take her all over Vorra, including the mining site where she finds the tile."],
+  facts:{Type:"Takeaway",Rider:"Sera Calloway"},links:[["sera","employs"],["vorra","in"]]},
+
+ /* ---- factions ---- */
+ {id:"goodorg",kind:"faction",name:"The Good Organisation",hue:[150,190],region:"Hidden",tags:["Name TBC","Covert"],
+  sum:"A secret group countering forbidden magic, hidden behind Sorene Academy's administration.",
+  body:["It monitors the villain organisation's use of forbidden ancient magic, tracks curse victims and keeps a database of the exiled.",
+   "Its operatives were tailing the gang when Sera was cornered in an alley. The duel lock meant they could only watch. She won, they offered her a contact card, she turned it down, then called on impulse during a delivery run. They moved Nora to a safer flat and placed Sera at the academy."],
+  facts:{Name:"Not decided yet",Cover:"Academy administration",Senior:"Edric Clay"},
+  links:[["edric","senior figure"],["sera","recruited"],["villainorg","opposes"],["curse","tracks victims"]]},
+ {id:"villainorg",kind:"faction",name:"The Villain Organisation",hue:[280,350],region:"Hidden",tags:["Name TBC","Forbidden magic"],
+  sum:"A shadow organisation whose upper ranks still hold forbidden ancient spells.",
+  body:["Its leaders kept ancient written spells that were meant to be lost when Sorene's system began. They use them to curse anyone who threatens them, cutting them off from card society entirely.",
+   "Street gangs act as foot soldiers, running illegal duelling rings to scout talent. The leaders use the forbidden texts by rote without truly understanding the language, which is the advantage Sera may one day have over them."],
+  facts:{Name:"Not decided yet",Weapon:"Curse of exile"},
+  links:[["gangs","foot soldiers"],["isolde","recruits"],["mave","cursed"],["goodorg","opposed by"]]},
+ {id:"gangs",kind:"faction",name:"Street Gangs",hue:[350,20],region:"Vorra",tags:["Illegal rings"],
+  sum:"The villain organisation's foot soldiers, running underground duelling rings as a recruitment pipeline.",
+  body:["They run the illegal rings in Vorra's lower levels where Sera duels. After she wins one night in a way that catches their eye, they corner her in an alley and challenge her. She wins, and they vanish using magic."],
+  facts:{Runs:"Underground duelling rings"},links:[["villainorg","serve"],["sera","challenged"]]},
+ {id:"expansionists",kind:"faction",name:"The Expansionists",hue:[40,90],region:"Vorra",tags:["Politics"],
+  sum:"A Vorra faction that wants to cash in on the ancient cards while they last.",
+  body:["They want to invite outside hunters in, charge access fees and build wealth now."],
+  facts:{Stance:"Exploit the dig sites"},links:[["vorra","faction of"],["preservationists","opposed"]]},
+ {id:"preservationists",kind:"faction",name:"The Preservationists",hue:[120,170],region:"Vorra",tags:["Politics"],
+  sum:"A Vorra faction that reveres the ancient sites and fears what happens when the cards run out.",
+  body:["They hold a spiritual reverence for the excavation sites and are uneasy about outsiders, including Strathenor researchers, studying them."],
+  facts:{Stance:"Protect the dig sites"},links:[["vorra","faction of"],["expansionists","opposed"],["strathenor","tension"]]},
+
+ /* ---- artefacts ---- */
+ {id:"tile",kind:"item",name:"The Tile Card",hue:[260,40],region:"Mining site",tags:["Ancient","Pre-regulated"],
+  sum:"An ancient tile Sera finds in the miners' scrap, which connects her to the lost language of magic.",
+  body:["Found in a crate of discarded tiles at a mining site. That night Sera traces and restores its faded engravings by hand. The tile grows warm, the magic flows back through her, and she connects to the original language of written magic, older than the card system itself."],
+  facts:{Found:"Mining site scrap",Holder:"Sera Calloway"},links:[["sera","found by"],["writtenmagic","original language"]]},
+
+ /* ---- lore ---- */
+ {id:"writtenmagic",kind:"lore",name:"Written Magic",hue:[220,40],region:"—",tags:["Magic","Society"],
+  sum:"Magic written as symbols, once unrestricted and catastrophic, now regulated into cards.",
+  body:["In ancient times symbols inscribed on stone and wood could summon creatures and unleash catastrophes. Sorene's system restricted it to sanctioned duels using pre-designed cards issued in each continent.",
+   "Today duelling is the backbone of society: legal disputes, business deals, politics and status are all settled through sanctioned duels. Ancient tiles from before the system still hold power far beyond modern cards, and are hunted as treasure."],
+  facts:{Regulated:"By Sorene",Ancient:"Tile cards"},links:[["sorene","regulated by"],["tile","ancient form"]]},
+ {id:"curse",kind:"lore",name:"The Curse of Exile",hue:[290,0],region:"—",tags:["Forbidden"],
+  sum:"A forbidden spell that seals its victim away from cards and card society: social death.",
+  body:["The afflicted cannot go near cards or card-regulated spaces. In a world that runs on duels, that means no work, no legal standing and no way to settle disputes. Victims end up somewhere beyond the city boundaries, and the seal prevents tracking."],
+  facts:{Used:"Villain organisation",Victims:"Mave, and others"},links:[["villainorg","used by"],["mave","victim"],["goodorg","tracked by"]]},
+ {id:"tiers",kind:"lore",name:"Academy Tiers",hue:[45,120],region:"Sorene Academy",tags:["Class divide"],
+  sum:"Elite Tier lives in luxury, Standard Tier on loans, and a rare tournament bridges the two.",
+  body:["Elite Tier: private ensuite dorms, personal staff, smaller classes, newer equipment and early access to new sets. Families pay upfront.",
+   "Standard Tier: still prestigious but self-maintained, with hand-me-down equipment and shared facilities. Families take on big loans to afford it.",
+   "Periodic internal tournaments let top Standard students fight up against Elite students. Winning wipes the loan and earns Elite status, and it happens rarely enough to feel like legend."],
+  facts:{Tiers:"Elite, Standard",Route:"Tournament scholarship"},links:[["academy","system of"],["isolde","Elite"],["sera","Standard"]]},
+];
+const byId=Object.fromEntries(E.map(e=>[e.id,e]));
+
+/* ---------- storage ---------- */
+const store={get(k,d){try{const v=localStorage.getItem("enscraCodex."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("enscraCodex."+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- views ---------- */
+const view=document.getElementById("view"), nav=document.getElementById("nav"), q=document.getElementById("q");
+let state={tab:store.get("tab","all"),entry:null,query:""};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sigil=(e,cls="")=>e.img?`<div class="sigil art ${cls}" style="background:url(${e.img}) ${e.pos||"50% 30%"}/cover no-repeat,hsl(${e.hue[0]} 35% 14%)" role="img" aria-label="${esc(e.name)}"></div>`:`<div class="sigil ${cls}" style="background:radial-gradient(circle at 30% 30%,hsl(${e.hue[0]} 70% 55% / .85),transparent 60%),radial-gradient(circle at 75% 70%,hsl(${e.hue[1]} 70% 45% / .8),transparent 55%),linear-gradient(135deg,hsl(${e.hue[0]} 35% 14%),hsl(${e.hue[1]} 35% 10%))"><span>${esc(e.name[0])}</span></div>`;
+
+function renderNav(){
+  const items=[["all","Everything",E.length],...Object.entries(KINDS).map(([k,v])=>[k,v,E.filter(e=>e.kind===k).length]),["graph","Connections",""]];
+  nav.innerHTML=items.map(([k,l,c])=>`<button data-tab="${k}" aria-current="${state.tab===k&&!state.entry}">${l}<span class="count">${c}</span></button>`).join("");
+}
+function render(){
+  renderNav();
+  document.getElementById("main").scrollTop=0;
+  if(state.entry) return renderEntry(byId[state.entry]);
+  if(state.tab==="graph") return renderGraphView();
+  const list=E.filter(e=>(state.tab==="all"||e.kind===state.tab)&&(!state.query||(e.name+e.sum+e.tags.join(" ")+e.region).toLowerCase().includes(state.query)));
+  const title=state.tab==="all"?"The world of Enscra":KINDS[state.tab];
+  view.innerHTML=`<div class="head"><div><div class="eyebrow">${state.query?"Search":"Codex"}</div><h1>${state.query?`Results for “${esc(state.query)}”`:title}</h1>
+  <p class="sub">${state.tab==="all"&&!state.query?"A planet where written card magic governs society. Four continents, one forgotten tile card.":""}</p></div></div>
+  ${list.length?`<div class="grid">${list.map(e=>`<button class="card glass" data-entry="${e.id}">${sigil(e)}<div class="card-body"><div class="tags"><span class="tag kind">${KINDS[e.kind].replace(/s$/,"")}</span><span class="tag">${esc(e.region)}</span></div><h3>${esc(e.name)}</h3><p>${esc(e.sum)}</p></div></button>`).join("")}</div>`:`<p class="empty">Nothing in the codex matches that yet.</p>`}`;
+}
+function renderEntry(e){
+  view.innerHTML=`<div class="head" style="padding-bottom:0"><button class="back" data-back>← Back to ${state.tab==="all"?"everything":KINDS[state.tab]||"codex"}</button></div>
+  ${sigil(e,"hero-sigil")}
+  <div class="head" style="padding-top:4px"><div><div class="eyebrow">${KINDS[e.kind].replace(/s$/,"")} · ${esc(e.region)}</div><h1>${esc(e.name)}</h1><div class="tags" style="margin-top:12px">${e.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></div></div>
+  <div class="detail">
+    <div class="panel glass prose"><h2>Entry</h2>${e.body.map(p=>`<p>${esc(p)}</p>`).join("")}</div>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="panel glass"><h2>At a glance</h2><dl class="facts">${Object.entries(e.facts).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
+      <div class="panel glass"><h2>Connections</h2>${e.links.length?miniGraph(e):`<p class="empty" style="padding:0">No connections yet.</p>`}</div>
+    </div>
+  </div>`;
+}
+function miniGraph(e){
+  const W=320,H=260,cx=W/2,cy=H/2,r=88,n=e.links.length;
+  let out=`<svg class="graph" viewBox="0 0 ${W} ${H}" role="img" aria-label="Connections of ${esc(e.name)}">`;
+  e.links.forEach(([id,rel],i)=>{const a=-Math.PI/2+i*2*Math.PI/n,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r*.82,o=byId[id];
+    out+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--line)" stroke-width="1.2"/><text class="rel" x="${(cx+x)/2}" y="${(cy+y)/2-4}" text-anchor="middle">${esc(rel)}</text>`;
+    out+=`<g class="node" data-entry="${id}" tabindex="0"><circle cx="${x}" cy="${y}" r="15" fill="hsl(${o.hue[0]} 45% 22%)" stroke="var(--line)" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" style="font-family:var(--f-display);font-size:13px">${esc(o.name[0])}</text><text x="${x}" y="${y+30}" text-anchor="middle">${esc(o.name.split(" ")[0])}</text></g>`;});
+  return out+`<circle cx="${cx}" cy="${cy}" r="21" fill="var(--accent)" opacity=".9"/><text x="${cx}" y="${cy+5}" text-anchor="middle" style="fill:#0a0a14;font-family:var(--f-display);font-size:16px">${esc(e.name[0])}</text></svg>`;
+}
+/* ---------- connections: draggable force graph ---------- */
+const KIND_COL={character:"#f2c46d",place:"#4aa8ff",faction:"#b07bff",item:"#5fd08a",lore:"#d9dff0"};
+const gpos=new Map();let gKinds=new Set(Object.keys(KINDS)),gView=null;
+function renderGraphView(){
+  view.innerHTML=`<div class="head"><div><div class="eyebrow">Codex</div><h1>Connections</h1><p class="sub">Drag entries around, pinch or scroll to zoom, hover to see who's linked, tap to open.</p></div></div>
+  <div class="graphwrap glass" id="gwrap"><canvas id="gcv" aria-label="Relationship graph"></canvas>
+  <div class="gchips" id="gchips">${Object.entries(KINDS).map(([k,l])=>`<button data-gk="${k}" aria-pressed="${gKinds.has(k)}"><i style="background:${KIND_COL[k]}"></i>${l}</button>`).join("")}</div>
+  <button class="grecenter" id="grecenter">Recentre</button></div>`;
+  document.getElementById("gchips").onclick=e=>{const b=e.target.closest("[data-gk]");if(!b)return;const k=b.dataset.gk;gKinds.has(k)?gKinds.delete(k):gKinds.add(k);if(!gKinds.size)gKinds.add(k);renderGraphView()};
+  startGraph();
+}
+function startGraph(){
+  const cv=document.getElementById("gcv"),wrap=document.getElementById("gwrap"),c=cv.getContext("2d");
+  const nodes=E.filter(e=>gKinds.has(e.kind)).map(e=>{const p=gpos.get(e.id)||{x:(Math.random()-.5)*400,y:(Math.random()-.5)*300,vx:0,vy:0};gpos.set(e.id,p);return{e,p,deg:0}});
+  const idx=new Map(nodes.map(n=>[n.e.id,n])),seen=new Set(),edges=[];
+  E.forEach(e=>e.links.forEach(([id,rel])=>{const a=idx.get(e.id),b=idx.get(id);if(!a||!b)return;const k=[e.id,id].sort().join("|");if(seen.has(k))return;seen.add(k);edges.push({a,b,rel});a.deg++;b.deg++}));
+  const nb=new Map(nodes.map(n=>[n,new Set()]));edges.forEach(({a,b})=>{nb.get(a).add(b);nb.get(b).add(a)});
+  const rad=n=>7+Math.min(n.deg,8)*1.6;
+  let W=0,H=0,dpr=1;
+  if(!gView)gView={x:0,y:0,s:1};const v=gView;
+  function size(){const r=wrap.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.style.height=H+"px"}
+  size();const ro=new ResizeObserver(size);ro.observe(wrap);
+  let alpha=1,hover=null,drag=null,pan=null,moved=0;const ptrs=new Map();let pinch=null;
+  const toWorld=(sx,sy)=>[(sx-W/2-v.x)/v.s,(sy-H/2-v.y)/v.s];
+  const hit=(sx,sy)=>{const[wx,wy]=toWorld(sx,sy);let best=null,bd=1e9;for(const n of nodes){const d=Math.hypot(n.p.x-wx,n.p.y-wy);if(d<rad(n)+8/v.s&&d<bd){bd=d;best=n}}return best};
+  function step(){
+    if(alpha<.002&&!drag)return;
+    for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const A=nodes[i].p,B=nodes[j].p;let dx=A.x-B.x,dy=A.y-B.y,d2=dx*dx+dy*dy||.01;if(d2>250000)continue;const f=2600/d2*alpha,d=Math.sqrt(d2);dx/=d;dy/=d;A.vx+=dx*f;A.vy+=dy*f;B.vx-=dx*f;B.vy-=dy*f}
+    edges.forEach(({a,b})=>{const dx=b.p.x-a.p.x,dy=b.p.y-a.p.y,d=Math.hypot(dx,dy)||.01,f=(d-120)*.03*alpha;a.p.vx+=dx/d*f;a.p.vy+=dy/d*f;b.p.vx-=dx/d*f;b.p.vy-=dy/d*f});
+    nodes.forEach(n=>{const p=n.p;p.vx-=p.x*.004*alpha;p.vy-=p.y*.004*alpha;if(drag&&drag.n===n){p.vx=p.vy=0;return}p.vx*=.82;p.vy*=.82;p.x+=p.vx;p.y+=p.vy});
+    alpha*=.992;
+  }
+  function draw(){
+    const acc=getComputedStyle(document.body).getPropertyValue("--accent").trim()||"#b9c2ff";
+    c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+    c.save();c.translate(W/2+v.x,H/2+v.y);c.scale(v.s,v.s);
+    const focus=hover||(drag&&drag.n),near=focus?nb.get(focus):null;
+    edges.forEach(({a,b,rel})=>{const on=focus&&(a===focus||b===focus);c.strokeStyle=on?acc:"rgba(200,205,230,"+(focus?.06:.22)+")";c.lineWidth=(on?1.8:1)/v.s;c.beginPath();c.moveTo(a.p.x,a.p.y);c.lineTo(b.p.x,b.p.y);c.stroke();
+      if(on){c.fillStyle="rgba(233,234,244,.75)";c.font=`${10/v.s}px "JetBrains Mono",monospace`;c.textAlign="center";c.fillText(rel,(a.p.x+b.p.x)/2,(a.p.y+b.p.y)/2-4/v.s)}});
+    nodes.forEach(n=>{const dim=focus&&n!==focus&&!near.has(n),r=rad(n),col=KIND_COL[n.e.kind];c.globalAlpha=dim?.18:1;
+      const g=c.createRadialGradient(n.p.x,n.p.y,0,n.p.x,n.p.y,r*2.6);g.addColorStop(0,col+"55");g.addColorStop(1,col+"00");c.fillStyle=g;c.beginPath();c.arc(n.p.x,n.p.y,r*2.6,0,6.283);c.fill();
+      c.fillStyle=col;c.beginPath();c.arc(n.p.x,n.p.y,r,0,6.283);c.fill();
+      if(n===focus){c.strokeStyle=acc;c.lineWidth=2.5/v.s;c.stroke()}
+      const showLabel=!dim&&(v.s>.7||n===focus||(near&&near.has(n))||n.deg>=4);
+      if(showLabel){c.fillStyle=n===focus?"#fff":"rgba(233,234,244,.9)";c.font=`${(n===focus?600:500)} ${12/Math.max(v.s,.6)}px Manrope,system-ui,sans-serif`;c.textAlign="center";c.fillText(n.e.name,n.p.x,n.p.y+r+14/Math.max(v.s,.6))}
+      c.globalAlpha=1});
+    c.restore();
+  }
+  (function loop(){if(!cv.isConnected){ro.disconnect();return}step();draw();requestAnimationFrame(loop)})();
+  const pos=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+  cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,pos(e));moved=0;
+    if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),s:v.s};drag=null;pan=null;return}
+    const[sx,sy]=pos(e),n=hit(sx,sy);if(n){drag={n};alpha=Math.max(alpha,.5);hover=n}else pan={sx,sy,x:v.x,y:v.y}});
+  cv.addEventListener("pointermove",e=>{const[sx,sy]=pos(e);
+    if(ptrs.has(e.pointerId)){const prev=ptrs.get(e.pointerId);moved+=Math.hypot(sx-prev[0],sy-prev[1]);ptrs.set(e.pointerId,[sx,sy])}
+    if(pinch&&ptrs.size===2){const[a,b]=[...ptrs.values()];v.s=Math.min(3,Math.max(.3,pinch.s*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch.d));return}
+    if(drag){const[wx,wy]=toWorld(sx,sy);drag.n.p.x=wx;drag.n.p.y=wy;alpha=Math.max(alpha,.3)}
+    else if(pan){v.x=pan.x+sx-pan.sx;v.y=pan.y+sy-pan.sy}
+    else if(e.pointerType==="mouse"){hover=hit(sx,sy);cv.style.cursor=hover?"pointer":"grab"}});
+  const end=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
+    if(drag&&moved<6){const id=drag.n.e.id;drag=null;state.entry=id;render();return}
+    drag=null;pan=null;if(e.pointerType!=="mouse")hover=null};
+  cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
+  cv.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"&&!drag)hover=null});
+  cv.addEventListener("wheel",e=>{e.preventDefault();const[sx,sy]=pos(e),ns=Math.min(3,Math.max(.3,v.s*Math.exp(-e.deltaY*.0015))),k=ns/v.s;v.x=(v.x+W/2-sx)*k+sx-W/2;v.y=(v.y+H/2-sy)*k+sy-H/2;v.s=ns},{passive:false});
+  document.getElementById("grecenter").onclick=()=>{v.x=0;v.y=0;v.s=1;alpha=.6};
+}
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("[data-tab],[data-entry],[data-back]");if(!t)return;
+  if(t.dataset.tab){state.tab=t.dataset.tab;state.entry=null;store.set("tab",state.tab)}
+  else if(t.dataset.entry){state.entry=t.dataset.entry}
+  else state.entry=null;
+  render();
+});
+document.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.matches("g.node")){state.entry=ev.target.dataset.entry;render()}});
+q.addEventListener("input",()=>{state.query=q.value.trim().toLowerCase();state.entry=null;render()});
+document.getElementById("gems").innerHTML=["red","green","blue","white","purple"].map(c=>`<span class="gem" title="${c}" style="background:var(--gem-${c});color:var(--gem-${c})"></span>`).join("");
+
+/* ---------- backdrops ---------- */
+const THEMES=[
+ {id:"star",name:"Starfield",note:"The card back sky",sw:"radial-gradient(circle at 30% 40%,#4b4f9a,transparent 50%),#07070f"},
+ {id:"ember",name:"Emberfall",note:"Red · fire-cult sparks",sw:"radial-gradient(circle at 50% 100%,#e2603a,transparent 60%),#0e0706"},
+ {id:"verdant",name:"Verdant Root",note:"Green · drifting spores",sw:"radial-gradient(circle at 40% 70%,#2f8f57,transparent 60%),#050c08"},
+ {id:"tide",name:"Undertide",note:"Blue · the returning sea",sw:"linear-gradient(180deg,#040912 40%,#16518a)"},
+ {id:"gale",name:"Pale Gale",note:"White · indifferent wind",sw:"linear-gradient(100deg,#0b0d12,#4a5468 60%,#0b0d12)"},
+ {id:"void",name:"The Void",note:"Purple · shadow nebula",sw:"radial-gradient(circle at 60% 40%,#7a3fd0,transparent 55%),#08050f"},
+];
+let bg=store.get("bg","star"),animate=store.get("anim",!matchMedia("(prefers-reduced-motion: reduce)").matches);
+const themesEl=document.getElementById("themes");
+function renderThemes(){themesEl.innerHTML=THEMES.map(t=>`<button class="theme" data-theme-id="${t.id}" aria-pressed="${t.id===bg}"><div class="sw" style="background:${t.sw}"></div><div>${t.name}<small>${t.note}</small></div></button>`).join("")}
+themesEl.addEventListener("click",ev=>{const b=ev.target.closest("[data-theme-id]");if(!b)return;setBg(b.dataset.themeId)});
+function setBg(id){bg=id;store.set("bg",id);document.body.dataset.bg=id;renderThemes();seed()}
+const animToggle=document.getElementById("animToggle");animToggle.checked=animate;
+animToggle.addEventListener("change",()=>{animate=animToggle.checked;store.set("anim",animate);if(animate)loop();else draw(0)});
+
+const cv=document.getElementById("sky"),cx2=cv.getContext("2d");let P=[],W0=0,H0=0,dpr=1,t0=0;
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W0=innerWidth;H0=innerHeight;cv.width=W0*dpr;cv.height=H0*dpr;cx2.setTransform(dpr,0,0,dpr,0,0);seed()}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function seed(){
+  const n={star:220,ember:110,verdant:80,tide:7,gale:60,void:160}[bg];
+  P=Array.from({length:n},(_,i)=>({x:rnd(0,W0),y:rnd(0,H0),r:rnd(.4,1.8),s:rnd(.2,1),p:rnd(0,6.28),i}));
+}
+function draw(t){
+  const c=cx2;c.clearRect(0,0,W0,H0);
+  const g=(x,y,r,col)=>{const gr=c.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,col);gr.addColorStop(1,"transparent");c.fillStyle=gr;c.fillRect(0,0,W0,H0)};
+  const T=t/1000;
+  if(bg==="star"){g(W0*.25,H0*.3,W0*.5,"rgba(70,75,170,.35)");g(W0*.8,H0*.75,W0*.45,"rgba(130,70,170,.22)");
+    P.forEach(p=>{const a=.35+.65*Math.abs(Math.sin(T*p.s+p.p));c.fillStyle=`rgba(225,230,255,${a})`;c.beginPath();c.arc((p.x+T*4*p.s)%W0,p.y,p.r,0,7);c.fill()});
+    const gems=["#ff6a4a","#5fd08a","#4aa8ff","#e8eef7","#a66bff"];gems.forEach((col,i)=>{const x=W0*(.15+i*.18),y=H0*.12+Math.sin(T*.4+i)*8;c.save();c.translate(x,y);c.rotate(Math.PI/4);c.globalAlpha=.25;c.fillStyle=col;c.shadowColor=col;c.shadowBlur=14;c.fillRect(-2.5,-2.5,5,5);c.restore()})}
+  else if(bg==="ember"){g(W0*.5,H0*1.1,H0*.9,"rgba(226,96,58,.45)");
+    P.forEach(p=>{const y=(p.y-T*30*p.s*2+H0*10)%H0,x=p.x+Math.sin(T+p.p)*14;c.fillStyle=`rgba(255,${120+p.r*50|0},60,${.3+.6*(y/H0)})`;c.beginPath();c.arc(x,y,p.r*1.3,0,7);c.fill()})}
+  else if(bg==="verdant"){g(W0*.3,H0*.8,W0*.6,"rgba(40,140,80,.35)");g(W0*.85,H0*.2,W0*.4,"rgba(90,160,60,.2)");
+    P.forEach(p=>{const y=(p.y-T*8*p.s+H0*10)%H0,x=p.x+Math.sin(T*.5+p.p)*30;c.fillStyle=`rgba(170,240,180,${.25+.5*Math.abs(Math.sin(T*.7+p.p))})`;c.beginPath();c.arc(x,y,p.r*2,0,7);c.fill()})}
+  else if(bg==="tide"){g(W0*.5,H0*1.2,H0,"rgba(30,110,200,.45)");
+    P.forEach((p,i)=>{c.strokeStyle=`rgba(120,190,255,${.08+i*.03})`;c.lineWidth=1.2;c.beginPath();const base=H0*(.45+i*.08);for(let x=0;x<=W0;x+=12){const y=base+Math.sin(x/(140+i*30)+T*(.3+i*.05)+i)*(10+i*4);x?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()})}
+  else if(bg==="gale"){g(W0*.6,H0*.4,W0*.6,"rgba(170,180,200,.18)");
+    P.forEach(p=>{const x=(p.x+T*160*p.s+W0*10)%(W0+200)-100,y=p.y+Math.sin(T*.8+p.p)*10,l=40+p.r*50;const gr=c.createLinearGradient(x-l,y,x,y);gr.addColorStop(0,"rgba(240,245,255,0)");gr.addColorStop(1,`rgba(240,245,255,${.15+p.s*.25})`);c.strokeStyle=gr;c.lineWidth=p.r*.8;c.beginPath();c.moveTo(x-l,y);c.lineTo(x,y);c.stroke()})}
+  else if(bg==="void"){g(W0*(.5+Math.sin(T*.1)*.1),H0*.4,W0*.55,"rgba(130,60,230,.35)");g(W0*.2,H0*.85,W0*.4,"rgba(200,60,160,.18)");
+    P.forEach(p=>{const a=Math.atan2(p.y-H0/2,p.x-W0/2)+T*.03*p.s,d=Math.hypot(p.x-W0/2,p.y-H0/2);c.fillStyle=`rgba(210,180,255,${.2+.5*Math.abs(Math.sin(T*p.s+p.p))})`;c.beginPath();c.arc(W0/2+Math.cos(a)*d,H0/2+Math.sin(a)*d,p.r,0,7);c.fill()})}
+}
+function loop(t){if(!animate)return;draw(t||0);requestAnimationFrame(loop)}
+addEventListener("resize",()=>{resize();if(!animate)draw(0)});
+
+/* ---------- drawers ---------- */
+const scrim=document.getElementById("scrim");
+function openDrawer(id){document.querySelectorAll(".drawer").forEach(d=>d.hidden=d.id!==id);scrim.hidden=false;document.querySelector("#"+id+" [data-close]").focus()}
+function closeDrawers(){document.querySelectorAll(".drawer").forEach(d=>d.hidden=true);scrim.hidden=true}
+document.getElementById("openThemes").onclick=()=>openDrawer("themeDrawer");
+document.getElementById("openStations").onclick=()=>{renderStations();openDrawer("stationDrawer")};
+scrim.onclick=closeDrawers;document.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeDrawers);
+addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawers()});
+
+/* ---------- radio: generative stations + your own files ---------- */
+const STATIONS=[
+ {name:"Vorra Undercity",sub:"Low brass hum and clockwork plucks",root:110,scale:[0,2,3,5,7,8,10],bpm:76,wave:"triangle",bright:900,drone:"sawtooth"},
+ {name:"Valderia Halls",sub:"Bright marble bells",root:196,scale:[0,2,4,6,7,9,11],bpm:64,wave:"sine",bright:3200,drone:"sine"},
+ {name:"Tidewind",sub:"A slow tide that keeps coming back",root:146.8,scale:[0,2,3,5,7,9,10],bpm:58,wave:"sine",bright:1600,drone:"triangle"},
+ {name:"Emberroot",sub:"Ember pulse and rooted bass",root:98,scale:[0,1,3,5,7,8,10],bpm:96,wave:"square",bright:1200,drone:"sawtooth"},
+];
+const SONGS=[
+ {name:"Red · Fire",sub:"Hollow devotion",file:"../music/red.ogg",col:"#ff6a4a",bg:"ember"},
+ {name:"Green · Earth",sub:"Death and regrowth",file:"../music/green.ogg",col:"#5fd08a",bg:"verdant"},
+ {name:"Blue · Water",sub:"Melancholy tide",file:"../music/blue.ogg",col:"#4aa8ff",bg:"tide"},
+ {name:"White · Wind",sub:"Cool indifference",file:"../music/white.ogg",col:"#eef2fa",bg:"gale"},
+ {name:"Purple · Shadow",sub:"Recursion",file:"../music/purple.ogg",col:"#b07bff",bg:"void"},
+];
+const BUILTIN=SONGS.length;
+let tracks=[],si=store.get("station2",0)%BUILTIN,playing=false,ctx=null,master,an,timer=null,nextT=0,step=0,droneNodes=[],audioEl=null,mediaSrc=null;
+const allStations=()=>[...SONGS,...tracks.map(t=>({name:t.name,sub:"Your track",file:t.url}))];
+const syncBg=document.getElementById("syncBg");try{syncBg.checked=store.get("syncBg",true)}catch(e){}syncBg.onchange=()=>store.set("syncBg",syncBg.checked);
+const radio=document.getElementById("radio"),npTitle=document.getElementById("npTitle"),npSub=document.getElementById("npSub"),vol=document.getElementById("vol");
+vol.value=store.get("vol",.55);
+const bars=document.getElementById("bars");bars.innerHTML="<i></i>".repeat(10);
+function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=+vol.value*.5;an=ctx.createAnalyser();an.fftSize=64;
+  const dl=ctx.createDelay(1.2),fb=ctx.createGain(),wet=ctx.createGain();dl.delayTime.value=.42;fb.gain.value=.38;wet.gain.value=.35;master.connect(an);an.connect(ctx.destination);window.eqAn=ctx.createAnalyser();eqAn.fftSize=2048;eqAn.smoothingTimeConstant=.55;master.connect(eqAn);
+  master._fx=ctx.createGain();master._fx.connect(master);master._fx.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(master);vizLoop()}
+const hz=(st,deg,oct=0)=>st.root*Math.pow(2,(st.scale[((deg%7)+7)%7]+12*(Math.floor(deg/7)+oct))/12);
+function note(st,f,t,dur,g,wave){const o=ctx.createOscillator(),e=ctx.createGain(),lp=ctx.createBiquadFilter();o.type=wave;o.frequency.value=f;lp.type="lowpass";lp.frequency.value=st.bright;
+  e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+.02);e.gain.exponentialRampToValueAtTime(.0008,t+dur);o.connect(lp);lp.connect(e);e.connect(master._fx);o.start(t);o.stop(t+dur+.05)}
+function startGen(st){
+  droneNodes=[0,7].map((d,i)=>{const o=ctx.createOscillator(),g=ctx.createGain(),lp=ctx.createBiquadFilter();o.type=st.drone;o.frequency.value=hz(st,d,-1);o.detune.value=i?6:-6;lp.type="lowpass";lp.frequency.value=380;g.gain.value=0;g.gain.linearRampToValueAtTime(.05,ctx.currentTime+2);o.connect(lp);lp.connect(g);g.connect(master._fx);o.start();return{o,g}});
+  nextT=ctx.currentTime+.1;step=0;let deg=0;
+  timer=setInterval(()=>{const beat=60/st.bpm/2;while(nextT<ctx.currentTime+.25){
+    if(Math.random()<.62){deg+=[-2,-1,1,1,2,3,-3][Math.random()*7|0];deg=Math.max(-2,Math.min(9,deg));note(st,hz(st,deg,1),nextT,beat*rnd(2,5),.09,st.wave)}
+    if(step%8===0)note(st,hz(st,[0,3,4,5][(step/8|0)%4],0),nextT,beat*7,.07,"triangle");
+    if(step%16===0)[0,2,4].forEach(d=>note(st,hz(st,d+[0,3,4,5][(step/8|0)%4],0),nextT,beat*14,.025,"sine"));
+    nextT+=beat;step++}},60);
+}
+function stopAll(){clearInterval(timer);timer=null;droneNodes.forEach(({o,g})=>{try{g.gain.cancelScheduledValues(ctx.currentTime);g.gain.setTargetAtTime(0,ctx.currentTime,.3);o.stop(ctx.currentTime+1.2)}catch(e){}});droneNodes=[];if(audioEl){audioEl.pause()}}
+function play(){ensureCtx();ctx.resume();stopAll();const st=allStations()[si];
+  if(st.file){if(!audioEl){audioEl=new Audio();mediaSrc=ctx.createMediaElementSource(audioEl);mediaSrc.connect(master);audioEl.onended=()=>{si=(si+1)%allStations().length;play()}}audioEl.src=st.file;audioEl.play().catch(()=>{})}
+  else startGen(st);
+  if(st.bg&&syncBg.checked&&bg!==st.bg)setBg(st.bg);
+  playing=true;updateNP()}
+function pause(){stopAll();playing=false;updateNP()}
+function updateNP(){const st=allStations()[si];npTitle.textContent=st.name;npSub.textContent=playing?st.sub:"Paused · "+st.sub;radio.classList.toggle("playing",playing);
+  document.getElementById("play").setAttribute("aria-label",playing?"Pause":"Play");document.getElementById("playIco").innerHTML=playing?'<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>':'<path d="M7 4v16l13-8z"/>';if(!document.getElementById("stationDrawer").hidden)renderStations()}
+function go(d){const n=allStations().length;si=(si+d+n)%n;if(si<BUILTIN)store.set("station2",si);playing?play():updateNP()}
+document.getElementById("play").onclick=()=>playing?pause():play();
+document.getElementById("prev").onclick=()=>go(-1);document.getElementById("next").onclick=()=>go(1);
+vol.oninput=()=>{store.set("vol",+vol.value);if(master)master.gain.setTargetAtTime(+vol.value*.5,ctx.currentTime,.05)};
+function renderStations(){document.getElementById("slist").innerHTML=allStations().map((s,i)=>`<button class="st" data-st="${i}" aria-pressed="${i===si}"><span class="disc" style="width:30px;height:30px;${s.col?`background:conic-gradient(from 0deg,${s.col},#1a1a2a,${s.col})`:""}"></span><span><b>${esc(s.name)}</b><small>${esc(s.sub)}</small></span></button>`).join("")}
+document.getElementById("slist").addEventListener("click",e=>{const b=e.target.closest("[data-st]");if(!b)return;si=+b.dataset.st;if(si<BUILTIN)store.set("station2",si);play()});
+document.getElementById("files").addEventListener("change",e=>{const fs=[...e.target.files];if(!fs.length)return;const start=allStations().length;fs.forEach(f=>tracks.push({name:f.name.replace(/\.[^.]+$/,""),url:URL.createObjectURL(f)}));si=start;renderStations();play()});
+function vizLoop(){const d=new Uint8Array(an.frequencyBinCount),bs=bars.children;(function f(){an.getByteFrequencyData(d);for(let i=0;i<bs.length;i++)bs[i].style.height=Math.max(8,d[i*2+1]/255*100)+"%";requestAnimationFrame(f)})()}
+
+/* ---------- companion orb: five-gem particle sphere ---------- */
+const ORB_STATES=[["idle","Idle","Resting, breathing"],["listening","Listening","When you talk"],["thinking","Thinking","Working it out"],["speaking","Speaking","When it replies"],["eq","EQ","Five colour bands"]];
+function BANDS_UI(){return BANDS.map(([lo,hi,n],i)=>`<div><i><b style="background:${GEMS[i]};box-shadow:0 0 10px ${GEMS[i]}"></b></i><span>${n}<br>${lo<1000?lo:lo/1000+"k"}–${hi<1000?hi:hi/1000+"k"}</span></div>`).join("")}
+const GEMS=["#ff6a4a","#5fd08a","#4aa8ff","#eef2fa","#b07bff"]; // red, green, blue, white, purple
+let orbState="idle",accent="#b9c2ff",searching=false,searchTimer=null;
+const orbStatesEl=document.getElementById("orbStates"),orbDrawer=document.getElementById("orbDrawer");
+function renderOrbStates(){orbStatesEl.innerHTML=ORB_STATES.map(([id,n,s])=>`<button data-orb="${id}" aria-pressed="${id===orbState}">${n}<small>${s}</small></button>`).join("");document.getElementById("orbStateLabel").textContent=ORB_STATES.find(s=>s[0]===orbState)[1]}
+orbStatesEl.addEventListener("click",e=>{const b=e.target.closest("[data-orb]");if(b){orbState=b.dataset.orb;renderOrbStates()}});
+document.getElementById("orbFab").onclick=()=>{renderOrbStates();openDrawer("orbDrawer")};
+q.addEventListener("input",()=>{searching=true;clearTimeout(searchTimer);searchTimer=setTimeout(()=>searching=false,1400)});
+const readAccent=()=>{accent=getComputedStyle(document.body).getPropertyValue("--accent").trim()||accent};
+function hexA(h,a){h=h.replace("#","");if(h.length===3)h=h.split("").map(c=>c+c).join("");const n=parseInt(h,16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+
+// audio: each colour = one EQ band, in Hz
+const BANDS=[[20,250,"Bass"],[250,800,"Low mids"],[800,3000,"Vocals"],[3000,6000,"Presence"],[6000,16000,"Air"]];
+let freq=null,lvl=0;const bandLv=[0,0,0,0,0],peak=[60,60,60,60,60];
+function readAudio(T){
+  let real=null;
+  if(window.eqAn&&playing){if(!freq)freq=new Uint8Array(eqAn.frequencyBinCount);eqAn.getByteFrequencyData(freq);const hz=ctx.sampleRate/eqAn.fftSize;
+    real=BANDS.map(([lo,hi],i)=>{const a=Math.max(1,Math.floor(lo/hz)),b=Math.min(freq.length,Math.ceil(hi/hz));let s=0;for(let k=a;k<b;k++)s+=freq[k];const v=s/Math.max(1,b-a);
+      peak[i]=Math.max(peak[i]*.997,v,40);return Math.pow(Math.max(0,(v/peak[i]-.2)/.8),1.4)})}
+  let sim=[0,0,0,0,0];
+  if(orbState==="speaking"){const env=Math.abs(Math.sin(T*8.3))*(.4+.6*Math.abs(Math.sin(T*1.7)))*(Math.sin(T*.9)>-.6?1:.12);sim=sim.map((_,i)=>env*(.55+.45*Math.abs(Math.sin(T*(3+i*1.3)+i))))}
+  else if(orbState==="listening"){sim=sim.map((_,i)=>.2+.3*Math.abs(Math.sin(T*(4+i*.7)+i*1.1)))}
+  let tot=0;for(let i=0;i<5;i++){const t=Math.max(real?real[i]:0,sim[i]);bandLv[i]+=(t-bandLv[i])*(t>bandLv[i]?.4:.1);tot+=bandLv[i]}
+  lvl=tot/5;
+}
+
+// one set of dots that morphs between shapes, each dot a gem colour
+const N=170,GA=Math.PI*(3-Math.sqrt(5));
+const dots=Array.from({length:N},(_,k)=>{const y=1-2*(k+.5)/N,r=Math.sqrt(1-y*y),a=k*GA;return{c:k%5,fx:Math.cos(a)*r,fy:y,fz:Math.sin(a)*r,x:Math.cos(a)*r,y,z:Math.sin(a)*r,s:Math.random()*6.28}});
+const rotY=(x,y,z,a)=>[x*Math.cos(a)+z*Math.sin(a),y,-x*Math.sin(a)+z*Math.cos(a)];
+const rotX=(x,y,z,a)=>[x,y*Math.cos(a)-z*Math.sin(a),y*Math.sin(a)+z*Math.cos(a)];
+const ORBIT_TILT=[[.35,0],[1.1,.9],[-.6,1.8],[.9,-1.2],[-1.25,.4]];
+function target(d,k,T){
+  const B=bandLv[d.c],st=searching&&orbState==="idle"?"search":orbState;
+  if(st==="thinking"){ // five tilted rings, one per colour
+    const j=Math.floor(k/5),n=Math.ceil(N/5),a=T*(1.3+d.c*.18)*(d.c%2?1:-1)+j/n*Math.PI*2,r=.78+d.c*.05+B*.2;
+    let p=[Math.cos(a)*r,0,Math.sin(a)*r];p=rotX(...p,ORBIT_TILT[d.c][0]);return rotY(...p,ORBIT_TILT[d.c][1]+T*.2);}
+  if(st==="eq"){ // five stacked rings: bass at the bottom, air on top
+    const j=Math.floor(k/5),n=Math.ceil(N/5),a=j/n*Math.PI*2+T*.3*(d.c%2?1:-1),r=.32+B*.78+Math.sin(a*3+T*4)*B*.07,y=(2-d.c)*.36-B*.06;
+    return rotX(Math.cos(a)*r,y,Math.sin(a)*r,.42);}
+  if(st==="listening"){ // stacked rings with a rolling wave
+    const rings=9,per=Math.ceil(N/rings),ri=Math.floor(k/per),a=(k%per)/per*Math.PI*2+T*.35*(ri%2?1:-1),y0=-.8+ri/(rings-1)*1.6;
+    const y=y0+(.07+lvl*.22)*Math.sin(a*2+T*3.2-ri*.9),rr=Math.sqrt(Math.max(0,1-y0*y0))*(1+B*.15);return rotX(Math.cos(a)*rr,y,Math.sin(a)*rr,.35);}
+  if(st==="search"){ // fast spin with a bulge sweeping across
+    const p=rotY(d.fx,d.fy,d.fz,T*1.6),scan=Math.sin(T*2.2),near=Math.exp(-((p[0]-scan)**2)*18);return [p[0]*(1+near*.12),p[1]*(1+near*.12),p[2]];}
+  // idle + speaking: the sphere, each colour pushed outward by its band
+  const spin=orbState==="speaking"?.55:.22;
+  const wob=orbState==="speaking"?(.06+B*.45)*Math.sin(d.s*3+T*6+d.fy*4):0;
+  const breath=orbState==="idle"?Math.sin(T*1.3)*.03:0;
+  const r=1+breath+wob+B*.28;const p=rotY(d.fx*r,d.fy*r,d.fz*r,T*spin);return rotX(...p,.3+Math.sin(T*.4)*.08);
+}
+function drawOrb(cv,T,big){
+  const c=cv.getContext("2d"),S=cv.width,cx=S/2,cy=S/2,R=S*.3;c.clearRect(0,0,S,S);
+  const g=c.createRadialGradient(cx,cy,R*.2,cx,cy,R*1.7);g.addColorStop(0,hexA(accent,.16+lvl*.3));g.addColorStop(1,hexA(accent,0));c.fillStyle=g;c.fillRect(0,0,S,S);
+  const proj=dots.map(d=>{const pz=2.8/(2.8-d.z);return{x:cx+d.x*R*pz,y:cy+d.y*R*pz,z:d.z,d}}).sort((a,b)=>a.z-b.z);
+  c.globalCompositeOperation="lighter";
+  for(const p of proj){const depth=Math.max(0,Math.min(1,(p.z+1.3)/2.6)),B=bandLv[p.d.c],col=GEMS[p.d.c];
+    const sz=S*(big?.0075:.012)*(.45+depth*.9)*(1+B*.9)*(1+.2*Math.sin(T*2+p.d.s));
+    const al=Math.min(1,.15+depth*.75+B*.3);
+    if(depth>.55){const gg=c.createRadialGradient(p.x,p.y,0,p.x,p.y,sz*3.2);gg.addColorStop(0,hexA(col,al*.35));gg.addColorStop(1,hexA(col,0));c.fillStyle=gg;c.fillRect(p.x-sz*3.2,p.y-sz*3.2,sz*6.4,sz*6.4)}
+    c.fillStyle=hexA(col,al);c.beginPath();c.arc(p.x,p.y,sz,0,6.283);c.fill()}
+  c.globalCompositeOperation="source-over";
+}
+const orbSmall=document.getElementById("orbSmall"),orbBig=document.getElementById("orbBig");
+function placeFab(){document.getElementById("orbFab").style.bottom=`calc(${radio.offsetHeight+30}px + env(safe-area-inset-bottom,0px))`}
+addEventListener("resize",placeFab);
+const reducedMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
+(function orbLoop(t){const T=(t||0)/1000*(reducedMotion?.3:1);readAudio(T);
+  dots.forEach((d,k)=>{const[x,y,z]=target(d,k,T);d.x+=(x-d.x)*.09;d.y+=(y-d.y)*.09;d.z+=(z-d.z)*.09});
+  drawOrb(orbSmall,T,false);if(!orbDrawer.hidden){drawOrb(orbBig,T,true);const ms=document.querySelectorAll("#eqMeters b");for(let i=0;i<5;i++)ms[i].style.height=(4+bandLv[i]*96)+"%"}requestAnimationFrame(orbLoop)})();
+const _setBg=setBg;setBg=id=>{_setBg(id);readAccent()};
+
+/* ---------- boot ---------- */
+document.body.dataset.bg=bg;readAccent();renderThemes();resize();updateNP();render();placeFab();document.getElementById("eqMeters").innerHTML=BANDS_UI();
+animate?loop():draw(0);
+</script>
+<script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
+</body></html>
