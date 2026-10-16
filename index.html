@@ -1175,7 +1175,7 @@ const EMBERROOT_VESSELS = [
   {name:"Flame Zealot",      colour:"Red",   grade:2, atk:4, def:2, effect:"Breakthrough damage from this Vessel always hits the player.", copies:2},
   {name:"Bastion Warden",    colour:"Green", grade:2, atk:2, def:5, effect:"Adjacent Green Vessels gain +0/+2.", copies:3},
   {name:"Magma Drifter",     colour:"Red",   grade:2, atk:3, def:3, effect:"When played, deal 1 to any Vessel.", copies:2},
-  {name:"Wildfire Avatar",   colour:"Red",   grade:3, atk:6, def:3, effect:"Breakthrough damage always hits the player. Cannot be blocked by Grade 1 Vessels.", copies:2},
+  {name:"Wildfire Avatar",   colour:"Red",   grade:3, atk:6, def:3, effect:"Breakthrough damage always hits the player. Cannot be blocked by Level 1 Vessels.", copies:2},
   {name:"Mountainheart Colossus", colour:"Green", grade:3, atk:4, def:7, effect:"While on the field, Green Vessels you control gain +0/+1.", copies:2},
 ];
 
@@ -1199,7 +1199,7 @@ const EMBERROOT_RITES = [
   {name:"Searing Strike", colour:"Red",   cost:1, speed:"Instant", effect:"Target Vessel gains +2/+0 until end of turn.", copies:4},
   {name:"Molten Burst",   colour:"Red",   cost:2, speed:"Instant", effect:"Deal 2 damage to target Vessel.", copies:2},
   {name:"Bulwark",        colour:"Green", cost:1, speed:"Instant", effect:"Prevent the next 3 damage to target Vessel this turn.", copies:2},
-  {name:"Second Wind",    colour:"Green", cost:2, speed:"Main",    effect:"Return a Grade 1 Vessel from your Void to your hand.", copies:3},
+  {name:"Second Wind",    colour:"Green", cost:2, speed:"Main",    effect:"Return a Level 1 Vessel from your Void to your hand.", copies:3},
   {name:"Overgrowth",     colour:"Green", cost:2, speed:"Main",    effect:"Target Vessel gains +0/+3 permanently.", copies:3},
 ];
 const EMBERROOT_REALMS = [
@@ -1364,7 +1364,7 @@ function startOnPlayEffect(onPlay, playerIdx, colIdx, sourceName, fromRite){
   } else if(onPlay.returnGrade1FromVoid){
     const p = state.players[playerIdx];
     if(!p.void.some(c=>c.type==='Vessel' && c.grade===1)){
-      log(`${sourceName}: no Grade 1 Vessel in ${p.name}'s Void to return.`);
+      log(`${sourceName}: no Level 1 Vessel in ${p.name}'s Void to return.`);
     } else {
       state.pendingEffect = { kind:'returnFromVoid', sourceName, playerIdx, fromRite };
     }
@@ -1450,7 +1450,7 @@ function resolvePendingEffectZoneClick(playerIdx, colIdx){
     if(!col.colour) return; // must already be attuned to something
     const oldColour = col.colour;
     col.colour = pe.selectedColour;
-    log(`${pe.sourceName}: column ${colIdx+1} changed from ${oldColour} to ${pe.selectedColour} (grade unchanged).`);
+    log(`${pe.sourceName}: column ${colIdx+1} changed from ${oldColour} to ${pe.selectedColour} (level unchanged).`);
     state.pendingEffect = null; render(); return;
   }
   if(pe.kind==='redirectAttack'){
@@ -1484,7 +1484,7 @@ function resolvePendingEffectZoneClick(playerIdx, colIdx){
   }
 }
 
-// Second Wind's "return a Grade 1 Vessel from your Void to your hand" targets a Void card, not a board
+// Second Wind's "return a Level 1 Vessel from your Void to your hand" targets a Void card, not a board
 // zone, so it gets its own click handler (wired from the Void list instead of zoneClick).
 // Shared by two callers: the "already cast, pendingEffect is live" path (kept for the redirectAttack-
 // style flow), and the new "select then click the Void target" path in voidCardClick below, which pays
@@ -1496,7 +1496,7 @@ function resolveReturnFromVoid(playerIdx, cardId){
   const idx = p.void.findIndex(c=>c.id===cardId);
   if(idx<0) return false;
   const card = p.void[idx];
-  if(!(card.type==='Vessel' && card.grade===1)) return false; // only Grade 1 Vessels are eligible
+  if(!(card.type==='Vessel' && card.grade===1)) return false; // only Level 1 Vessels are eligible
   p.void.splice(idx,1);
   p.hand.push(card);
   log(`${pe.sourceName}: ${card.name} returned from ${p.name}'s Void to hand.`);
@@ -1508,7 +1508,7 @@ function voidCardClick(playerIdx, cardId){
   if(state.pendingPhaseWarning) return;
   if(resolveReturnFromVoid(playerIdx, cardId)){ render(); return; }
   // Casting Second Wind: it must be selected first (one click, like every other Rite), then clicking
-  // an eligible Grade 1 Vessel in your own Void pays the cost and resolves the return in the same
+  // an eligible Level 1 Vessel in your own Void pays the cost and resolves the return in the same
   // click. If the clicked card isn't a legal target, nothing is spent — it just falls through to the
   // normal zoom-in preview below.
   if(isMyActionableTurn() && playerIdx===state.current && state.selectedCardId!=null && !state.pendingEffect && !state.pendingAttack){
@@ -1574,7 +1574,7 @@ function castReattuneAtColumn(cardId, colIdx){
   state.selectedCardId = null;
   state.reattuneStaging = null;
   col.colour = colour;
-  log(`${p.name} casts ${card.name} (${card.colour}, ${card.cost} Attune): column ${colIdx+1} changed from ${oldColour} to ${colour} (grade unchanged).`);
+  log(`${p.name} casts ${card.name} (${card.colour}, ${card.cost} Attune): column ${colIdx+1} changed from ${oldColour} to ${colour} (level unchanged).`);
   if(iAmActing) net.sendAction({type:'castSpell', cardId: card.id});
   render();
   if(fromRect){
@@ -1831,7 +1831,7 @@ const TURN_GUIDE_STEPS = [
     resolve(){
       const el = document.querySelector('.board#board-0 .essenceBadge');
       if(!el) return null;
-      return { anchor: el, text:'<b>Attune</b> pays for actually playing a card — a Vessel costs Attune equal to its Grade, and a Rite or Realm costs the number printed on it. It never touches Devotion, and vice versa.' };
+      return { anchor: el, text:'<b>Attune</b> pays for actually playing a card — a Vessel costs Attune equal to its Level, and a Rite or Realm costs the number printed on it. It never touches Devotion, and vice versa.' };
     } },
   { phase:'Main1',
     // Points at a real card you can actually afford right now, reading its cost/Attack/Defense off
@@ -1845,13 +1845,13 @@ const TURN_GUIDE_STEPS = [
         const el = document.getElementById('cardEl-'+playableVessel.id);
         if(el){
           return { anchor: el,
-            text:`The number top-right is <b>${playableVessel.name}</b>'s cost — pay <b>${playableVessel.grade} Attune</b> to play it, into a column already devoted to ${playableVessel.colour} Grade ${playableVessel.grade}+. The numbers at the bottom (<b>${playableVessel.atk} / ${playableVessel.def}</b>) are Attack and Defense — Attack is the damage it deals attacking, Defense is how much it can take before it dies.` };
+            text:`The number top-right is <b>${playableVessel.name}</b>'s cost — pay <b>${playableVessel.grade} Attune</b> to play it, into a column already devoted to ${playableVessel.colour} Level ${playableVessel.grade}+. The numbers at the bottom (<b>${playableVessel.atk} / ${playableVessel.def}</b>) are Attack and Defense — Attack is the damage it deals attacking, Defense is how much it can take before it dies.` };
         }
       }
       if(!hasAnyPlayableHandCard(0)) return null; // nothing playable this turn — nothing to point at
       const el = document.querySelector('#handCards');
       if(!el) return null;
-      return { anchor: el, text:'Click a card in your hand you can afford, then click a glowing column of the matching colour and Grade to play it.' };
+      return { anchor: el, text:'Click a card in your hand you can afford, then click a glowing column of the matching colour and Level to play it.' };
     } },
   { phase:'Battle',
     // Unlike the other action-prompting steps, this one always shows rather than skipping when there's
@@ -2132,7 +2132,7 @@ function hasAnyPlayableHandCard(playerIdx){
 
 // A front-row Vessel that could still declare an attack this turn (not sick/spent/stunned). This is a
 // deliberately simple, conservative check — it doesn't verify a LEGAL target exists for every edge case
-// (e.g. a cannotBeBlockedByGrade1 attacker facing only Grade-1 blockers truly has no legal target, but
+// (e.g. a cannotBeBlockedByGrade1 attacker facing only Level-1 blockers truly has no legal target, but
 // that's rare enough that treating it as "might still have an attack" is the safe direction: it only
 // ever means the Skip button stays hidden one turn too cautiously, never that a real action gets skipped).
 function hasAnyEligibleAttacker(playerIdx){
@@ -2249,11 +2249,11 @@ function proceedToNextPhase(){
 
 // Devotion is a per-turn POOL (1 on turn 1, 2 on turn 2, 3 from turn 3 on — see devotionForTurn), not a
 // single "one attune per turn" token. You can spend it across as many attune actions as it covers in the
-// same Devotion Phase — one column up to a higher grade, or several columns to Grade 1 each, however you
+// same Devotion Phase — one column up to a higher grade, or several columns to Level 1 each, however you
 // split it. Each attune action only ever raises a column's grade by exactly 1 (see attuneTargetGrade —
 // re-attuning the same colour bumps +1, any other colour/unattuned column starts fresh at 1), so it only
 // ever costs 1 devotion, however high the resulting grade number reads. Charging the full target grade
-// again here was the bug: it double-charged every bump past Grade 1 (e.g. G1→G2 cost 2 more on top of
+// again here was the bug: it double-charged every bump past Level 1 (e.g. G1→G2 cost 2 more on top of
 // the 1 already spent reaching G1, when the whole point of a turn's pool is that 1 point = 1 bump).
 function attuneCost(colIdx, colour, grade){
   const p = cur();
@@ -2283,7 +2283,7 @@ function attuneColumn(colIdx, colour, grade){
   const iAmActing = net.isOnline && net.connected && net.mySeat===state.current;
   p.devotion -= cost;
   p.columns[colIdx] = {colour, grade};
-  log(`${p.name} devotes column ${colIdx+1} to ${colour} Grade ${grade} (-${cost} devotion, ${p.devotion} left this turn).`);
+  log(`${p.name} devotes column ${colIdx+1} to ${colour} Level ${grade} (-${cost} devotion, ${p.devotion} left this turn).`);
   flashAttune(state.current, colIdx);
   playSfx('devotion');
   if(iAmActing) net.sendAction({type:'attune', colIdx, colour, grade});
@@ -2335,7 +2335,7 @@ function placeSelected(colIdx){
   p.front[colIdx] = {...card, sick:true, riteShielded: !!mech(card.name).riteShieldOnPlay};
   p.hand = p.hand.filter(c=>c.id!==card.id);
   state.selectedCardId = null;
-  log(`${p.name} plays ${card.name} (${card.colour} G${card.grade}) to column ${colIdx+1} (-${card.grade} Attune).`);
+  log(`${p.name} plays ${card.name} (${card.colour} Lv${card.grade}) to column ${colIdx+1} (-${card.grade} Attune).`);
   playSfx('play');
   if(iAmActing) net.sendAction({type:'place', colIdx, card});
   render();
@@ -2402,7 +2402,7 @@ function canPlayCard(playerIdx, card){
 // castSpellCard's own messaging, so nothing was logged and nothing re-rendered — it just looked broken.
 function logWhyCardCantPlay(p, card){
   if(card.type==='Vessel'){
-    if(!hasEligibleColumn(state.current, card)) log(`${card.name}: no column devoted to ${card.colour} Grade ${card.grade} (or higher) with room for it.`);
+    if(!hasEligibleColumn(state.current, card)) log(`${card.name}: no column devoted to ${card.colour} Level ${card.grade} (or higher) with room for it.`);
     else if(p.essence < card.grade) log(`${card.name}: not enough Attune (needs ${card.grade}, you have ${p.essence}).`);
     else log(`${card.name} can't be played right now.`);
     return;
@@ -2511,7 +2511,7 @@ function castRiteAtZone(cardId, zonePlayerIdx, colIdx){
 // From there, how a selected Rite/Realm actually gets cast depends on what it targets:
 //   - no target at all (Realms, and Foresight's draw-a-card) — click the SAME card again to confirm.
 //   - a Vessel already on the board — click that Vessel's zone (see castRiteAtZone, wired into zoneClick).
-//   - a Grade 1 Vessel in your own Void (Second Wind) — click it in the Void list (see voidCardClick).
+//   - a Level 1 Vessel in your own Void (Second Wind) — click it in the Void list (see voidCardClick).
 //   - a colour then a column (Reattune) — pick the colour in the sidebar, then click a column (see
 //     selectReattuneStagingColour / castReattuneAtColumn, wired into zoneClick).
 // This mirrors Vessels' own select-then-target-click pattern instead of casting on the very first
@@ -2646,7 +2646,7 @@ function applyRemotePlace(colIdx, card){
   const idx = p.hand.findIndex(c=>c.hidden);
   if(idx>=0) p.hand.splice(idx,1);
   p.front[colIdx] = {...card, sick:true, riteShielded: !!mech(card.name).riteShieldOnPlay};
-  log(`${p.name} plays ${card.name} (${card.colour} G${card.grade}) to column ${colIdx+1}.`);
+  log(`${p.name} plays ${card.name} (${card.colour} Lv${card.grade}) to column ${colIdx+1}.`);
   playSfx('play');
   render();
 }
@@ -2683,7 +2683,7 @@ function selectAttacker(colIdx){
   render();
 }
 
-// ignoreGrade1: Wildfire Avatar's "cannot be blocked by Grade 1 Vessels" — when true, Grade-1 Vessels
+// ignoreGrade1: Wildfire Avatar's "cannot be blocked by Level 1 Vessels" — when true, Level-1 Vessels
 // don't count as a reason the opponent is protected from a direct attack.
 function frontRowHasVessels(playerIdx, ignoreGrade1){
   return state.players[playerIdx].front.some(v=>v && (!ignoreGrade1 || v.grade>1));
@@ -3021,13 +3021,13 @@ const GLOSSARY = [
   { key:'untilNextTurn', term:'until your next turn', regexMatch:true,
     def:'Lasts through your opponent\'s whole turn and wears off when your own next turn begins.' },
   { key:'devotionColour', term:'devotion colour', regexMatch:true,
-    def:'The colour a column is currently devoted to. Only Vessels of that colour (at or below the column\'s Grade) can be placed there.' },
+    def:'The colour a column is currently devoted to. Only Vessels of that colour (at or below the column\'s Level) can be placed there.' },
   { key:'permanently', term:'permanently', regexMatch:true,
     def:'Unlike an "until end of turn" effect, this change does NOT wear off — it stays in effect for the rest of the game (or until something else changes it).' },
   { key:'void', term:'Void', regexMatch:true,
     def:'Your discard pile — destroyed Vessels, used Rites, and discarded cards all end up here. Some cards can interact with cards already in the Void.' },
-  { key:'grade', term:'Grade', regexMatch:true,
-    def:'A Vessel\'s power level (1–3). A column can only hold a Vessel whose Grade is at or below that column\'s current devotion Grade.' },
+  { key:'grade', term:'Level', regexMatch:true,
+    def:'A Vessel\'s power level (1–3). A column can only hold a Vessel whose Level is at or below that column\'s current devotion Level.' },
   { key:'sick', term:'SICK', regexMatch:false,
     def:'This Vessel was just played and has summoning sickness — it can\'t attack this turn. It\'s ready again on your next turn.' },
   { key:'stunned', term:'STUNNED', regexMatch:false,
@@ -3451,12 +3451,12 @@ function renderBoard(playerIdx, mirrored, domId){
     if(isMainPhase(phase) && isCurrent && state.reattuneStaging && state.selectedCardId===state.reattuneStaging.cardId && col.colour){
       boxCls+=' targetable'; overlay='<div class="zoneOverlay">▸ REATTUNE</div>';
     }
-    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && isCurrent && v && !v.sick && !v.attacked && !v.stunned){ boxCls+=' placeable'; overlay='<div class="zoneOverlay">▸ SELECT</div>'; }
+    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && isCurrent && v && !v.sick && !v.attacked && !v.stunned){ boxCls+=' placeable'; overlay='<div class="zoneOverlay battleTap">TAP TO SELECT</div>'; }
     if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && isCurrent && state.selectedAttackerZone===String(i)) boxCls+=' targetable';
     if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && !isCurrent && state.selectedAttackerZone){
       const attacker = state.players[state.current].front[Number(state.selectedAttackerZone)];
       const ignoreG1 = attacker && mech(attacker.name).cannotBeBlockedByGrade1;
-      if(v && !(ignoreG1 && v.grade===1)){ boxCls+=' targetable'; overlay='<div class="zoneOverlay">▸ ATTACK</div>'; }
+      if(v && !(ignoreG1 && v.grade===1)){ boxCls+=' targetable'; overlay='<div class="zoneOverlay battleTap">TAP TO ATTACK</div>'; }
     }
     // redirectAttack (Deflect) is the one pendingEffect whose actor is the DEFENDER, not state.current —
     // everything else is cast on your own turn so pe.playerIdx===state.current always holds for those.
@@ -3467,7 +3467,7 @@ function renderBoard(playerIdx, mirrored, domId){
     if(phase==='Devotion' && isCurrent && state.selectedAttuneColour){
       const grade = attuneTargetGrade(playerIdx, i, state.selectedAttuneColour);
       const cost = attuneCost(i, state.selectedAttuneColour, grade);
-      if(canAttune(i, grade, state.selectedAttuneColour)){ boxCls+=' placeable'; overlay=`<div class="zoneOverlay">▸ DEVOTE G${grade} (-${cost})</div>`; }
+      if(canAttune(i, grade, state.selectedAttuneColour)){ boxCls+=' placeable'; overlay=`<div class="zoneOverlay">▸ DEVOTE Lv${grade} (-${cost})</div>`; }
     }
 
     let queuedTag = '';
@@ -3475,7 +3475,7 @@ function renderBoard(playerIdx, mirrored, domId){
       queuedTag = `<span class="queuedTag">▸${selectedCard.name}</span>`;
     }
     const devStripContent = col.colour
-      ? `<span class="colDot dot-${col.colour}"></span><span>${col.colour} G${col.grade}</span>`
+      ? `<span class="colDot dot-${col.colour}"></span><span>${col.colour} Lv${col.grade}</span>`
       : `<span class="devStripEmpty">undevoted</span>`;
 
     // Economy-teaching visual cue: a one-render glow on the column strip the instant it's attuned
@@ -3513,7 +3513,7 @@ function renderBoard(playerIdx, mirrored, domId){
     const ignoreG1Direct = atkV && mech(atkV.name).cannotBeBlockedByGrade1;
     const extraBtn = `<div style="text-align:center;margin-top:4px;">
       <button onclick="enemyFaceClick()" ${frontRowHasVessels(playerIdx, ignoreG1Direct) ? 'disabled':''}>
-        Attack ${p.name} directly (only if no front-row Vessels${ignoreG1Direct?' above Grade 1':''})
+        Attack ${p.name} directly (only if no front-row Vessels${ignoreG1Direct?' above Level 1':''})
       </button></div>`;
     document.getElementById(domId).innerHTML = header + body + extraBtn;
   } else {
@@ -3645,7 +3645,7 @@ function explainCardSelection(card){
     const m = mech(card.name);
     const re = m.riteEffect || {};
     if(re.drawCard) return `<span class="step">${label}</span> — <b>${card.name}</b> selected. It has no target — click it <b>again</b> to cast it and draw a card.`;
-    if(re.returnGrade1FromVoid) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — click a <b style="color:#ffd76b">highlighted</b> Grade 1 Vessel in your Void (open it below the board) to cast it and return that Vessel to hand.`;
+    if(re.returnGrade1FromVoid) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — click a <b style="color:#ffd76b">highlighted</b> Level 1 Vessel in your Void (open it below the board) to cast it and return that Vessel to hand.`;
     if(re.reattuneColumn) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — pick the new colour in the sidebar panel, then click one of your devoted columns to apply it.`;
     if(riteEffectWantsBoardZone(m)) return `<span class="step">${label}</span> — <b>${card.name}</b> selected — click a <b style="color:#7ee787">highlighted</b> Vessel on either board to cast it against that target.`;
     return `<span class="step">${label}</span> — <b>${card.name}</b> selected. Click it again to deselect.`;
@@ -3653,7 +3653,7 @@ function explainCardSelection(card){
   // Placement is free once a column is attuned — devotion was already spent attuning it.
   // The only reason a card can't be placed now is a colour/grade mismatch with every attuned column.
   if(!p.columns.some(c=>c.colour===card.colour && c.grade>=card.grade)){
-    return `<span class="step">${label}</span> — <b>${card.name}</b> is <b>${card.colour} Grade ${card.grade}</b>, but no column is devoted to that colour at grade ${card.grade} or higher. Devote a matching column (Devotion Phase) to unlock it, or pick a different card. No zones will light up for this card.`;
+    return `<span class="step">${label}</span> — <b>${card.name}</b> is <b>${card.colour} Level ${card.grade}</b>, but no column is devoted to that colour at level ${card.grade} or higher. Devote a matching column (Devotion Phase) to unlock it, or pick a different card. No zones will light up for this card.`;
   }
   return `<span class="step">${label}</span> — <b>${card.name}</b> selected — placement is free. Click or drop it on a <b style="color:#7ee787">green "PLACE HERE"</b> zone to summon it. Click the card again to deselect.`;
 }
@@ -3666,7 +3666,7 @@ function pendingEffectInstruction(pe){
   if(pe.kind==='bounceTargetEnemyVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click an <b>enemy</b> Vessel to return it to their hand.`;
   if(pe.kind==='bounceAnyVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click any Vessel on either board to return it to its owner's hand.`;
   if(pe.kind==='permBuffTargetVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click any Vessel on either board to apply ${pe.atk>=0?'+':''}${pe.atk}/${pe.def>=0?'+':''}${pe.def} <b>permanently</b>.`;
-  if(pe.kind==='returnFromVoid') return `<span class="step">Effect Pending</span> — ${sourceName}: click a <b style="color:#ffd76b">highlighted</b> Grade 1 Vessel in your Void (open it below the board) to return it to hand.`;
+  if(pe.kind==='returnFromVoid') return `<span class="step">Effect Pending</span> — ${sourceName}: click a <b style="color:#ffd76b">highlighted</b> Level 1 Vessel in your Void (open it below the board) to return it to hand.`;
   if(pe.kind==='reattuneColumn'){
     return pe.stage==='selectColour'
       ? `<span class="step">Effect Pending</span> — ${sourceName}: pick the new colour in the sidebar panel.`
@@ -3709,7 +3709,7 @@ function updateBigInstruction(){
     } else {
       const anyAttuned = p.columns.some(c=>c.colour);
       msg = anyAttuned
-        ? `<span class="step">${label}</span> — Click a card in your hand to select it, then click a highlighted zone to place it. Only columns devoted to that card's colour (grade or higher) light up.`
+        ? `<span class="step">${label}</span> — Click a card in your hand to select it, then click a highlighted zone to place it. Only columns devoted to that card's colour (level or higher) light up.`
         : `<span class="step">${label}</span> — No columns devoted yet, so nothing can be placed this turn. Click <b>Next Phase</b> to continue (devote next turn).`;
     }
   } else if(phase==='Battle'){
@@ -3891,7 +3891,7 @@ function render(){
 
   const hint = document.getElementById('hint');
   const hints = {
-    Devotion: `Spend devotion on columns: each point raises one column by one Grade.`,
+    Devotion: `Spend devotion on columns: each point raises one column by one Level.`,
     Draw: `Draws 1 card automatically (starting player skips their first draw).`,
     Main1: `Click a hand card, then click a highlighted zone to place it.`,
     Battle: `Click a non-sick, non-spent front-row Vessel, then click a target.`,
@@ -4019,15 +4019,15 @@ function aiDoDevotion(){
 
     // Picking a target column by raw cost alone made the AI repeatedly overwrite the SAME already-
     // invested column with whatever colour the next hand card needed — e.g. a 3 Blue column gets
-    // reattuned straight to 1 White for one card, throwing away the Grade progress it just built,
+    // reattuned straight to 1 White for one card, throwing away the Level progress it just built,
     // instead of spreading colours across its 5 columns the way a human player would. Cost alone can't
-    // see that: switching an existing column's colour to Grade 1 costs the same 1 devotion as attuning
+    // see that: switching an existing column's colour to Level 1 costs the same 1 devotion as attuning
     // a never-touched column, so ties always fell to whichever column the loop reached first (column
     // 1). Fix: rank candidate columns by what they'd cost the board, not just this turn —
-    //   1) a column already of this colour (just needs a Grade bump) — never wastes anything,
+    //   1) a column already of this colour (just needs a Level bump) — never wastes anything,
     //   2) a never-attuned column — free to claim, nothing lost,
     //   3) only if every column is taken by some other needed colour, reattune one — and then pick
-    //      the LOWEST-Grade one, so whatever gets overwritten is the least progress possible.
+    //      the LOWEST-Level one, so whatever gets overwritten is the least progress possible.
     let sameColourCol=-1, sameColourCost=Infinity;
     let emptyCol=-1, emptyCost=Infinity;
     let switchCol=-1, switchGrade=Infinity;
@@ -4127,7 +4127,7 @@ function aiDoMain(){
 }
 
 // Battle Phase: attack with every eligible (non-sick, non-spent, non-stunned) Vessel, one attack per
-// call — direct if the enemy board is empty (or ignores Grade-1 blockers and only Grade-1s remain),
+// call — direct if the enemy board is empty (or ignores Level-1 blockers and only Level-1s remain),
 // otherwise into whichever enemy Vessel has the lowest effective DEF (best chance of destroying it).
 function aiDoBattle(){
   const p = cur();
@@ -4473,6 +4473,32 @@ document.addEventListener('click', (e)=>{
   e.stopPropagation();
 }, true);
 
+// Battle taps on touch screens: a quick tap anywhere on a battlefield card selects it (or attacks it)
+// straight from the touch release, instead of waiting on the browser's click — which a slightly
+// wobbly fingertip can lose. The click that follows is swallowed so the same tap doesn't fire twice.
+let battleTap = null, battleTapAt = 0;
+document.addEventListener('pointerdown', (e)=>{
+  battleTap = null;
+  if(e.pointerType==='mouse' || PHASES[state.phaseIdx]!=='Battle') return;
+  if(typeof e.target.closest!=='function' || e.target.closest('.zoomBtn,.kw')) return;
+  const z = e.target.closest('.colBox[id^="zone-"]');
+  if(z) battleTap = { id:z.id, x:e.clientX, y:e.clientY, t:performance.now() };
+}, true);
+document.addEventListener('pointercancel', ()=>{ battleTap = null; }, true);
+document.addEventListener('pointerup', (e)=>{
+  const b = battleTap; battleTap = null;
+  if(!b || performance.now()-b.t > LONG_PRESS_MS) return; // a hold is a card inspect, not a tap
+  if(Math.hypot(e.clientX-b.x, e.clientY-b.y) > 24) return;
+  const m = b.id.match(/^zone-(\d)-(\d)-front$/); if(!m) return;
+  battleTapAt = performance.now();
+  window.zoneClick(+m[1], +m[2]);
+}, true);
+document.addEventListener('click', (e)=>{
+  if(!battleTapAt) return;
+  const recent = performance.now()-battleTapAt < 700; battleTapAt = 0;
+  if(recent && typeof e.target.closest==='function' && e.target.closest('.colBox[id^="zone-"]')){ e.preventDefault(); e.stopPropagation(); }
+}, true);
+
 // Dismiss the glossary popover on any click elsewhere. Non-capture, bubble-phase listener: a .kw
 // span's own onclick already called event.stopPropagation() before this ever runs, so clicking a
 // keyword (or re-clicking the same one to move it) never immediately closes what it just opened.
@@ -4617,7 +4643,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   // devotion / colour popup (the existing picker moves inside it)
   var pop=el('div','devPopup'); var card=el('div',null,'dpCard');
   var title=el('div',null,'dpTitle'), sub=el('div',null,'dpSub'), pts=el('div',null,'dpPts');
-  var foot=el('div',null,'dpFoot'), viewBtn=el('button',null,null,'View board'), doneBtn=el('button',null,'primary','Done →'), cancelBtn=el('button',null,null,'Cancel');
+  var foot=el('div',null,'dpFoot'), viewBtn=el('button',null,null,'View board'), doneBtn=el('button',null,'primary','Next Phase →'), cancelBtn=el('button',null,null,'Cancel');
   foot.appendChild(viewBtn); foot.appendChild(cancelBtn); foot.appendChild(doneBtn);
   card.appendChild(title); card.appendChild(pts); card.appendChild(sub); card.appendChild($('devotionPicker')); card.appendChild(foot);
   pop.appendChild(card); document.body.appendChild(pop);
@@ -4722,7 +4748,9 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
     var waitingCol = (isDev && state.selectedAttuneColour) || !!state.reattuneStaging;
     var lobbyUp = !$('lobbyOverlay').classList.contains('hidden');
     var key=popKey();
-    var show = pickerOn && !waitingCol && dismissedKey!==key && !lobbyUp && !state.gameOver && !(isDev && p.devotion<=0);
+    var txOn = $('modeTx') && $('modeTx').classList.contains('on'); // still playing the menu->game transition: popup waits for it to finish
+    var tutInfo = typeof TUT!=='undefined' && TUT.active && TUT_STEPS[TUT.step] && (TUT_STEPS[TUT.step].info || TUT_STEPS[TUT.step].wait); // read-only tutorial tip: keep the board clear
+    var show = pickerOn && !waitingCol && dismissedKey!==key && !lobbyUp && !txOn && !tutInfo && !state.gameOver && !(isDev && p.devotion<=0);
     if(isDev){
       title.textContent='Devotion';
       var left=p.devotion, tot=p.devotionTotal;
@@ -4758,10 +4786,15 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   </div>
 </div>
 <style>
+body.mobile .zoneOverlay.battleTap,.zoneOverlay.battleTap{top:0;bottom:auto;left:0;right:0;width:auto;max-width:none;height:48%;margin:0;padding:0 2px;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;line-height:1.1;border-radius:6px 6px 0 0;background:rgba(10,8,24,.55);}
+.colBox[id^="zone-"]{touch-action:manipulation;}
 #tutTip{display:none;position:fixed;z-index:350;width:min(300px,calc(100vw - 24px));box-sizing:border-box;padding:12px 14px;border-radius:14px;
   background:linear-gradient(180deg,rgba(30,26,62,.97),rgba(16,14,34,.97));border:1px solid rgba(255,215,107,.7);
   box-shadow:0 8px 30px rgba(0,0,0,.65),0 0 18px rgba(255,215,107,.18);color:#eee;font-family:system-ui,sans-serif;}
-#tutTip.open{display:block;}
+#tutTip.open{display:block;animation:ttIn .22s ease-out;}
+@keyframes ttIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.tutHL2{outline:2px dashed #ffd76b !important;outline-offset:2px;border-radius:8px;position:relative;z-index:5;}
 #tutTip .ttHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 #tutTip .ttStep{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd76b;}
 #tutTip .ttLeave{background:none;border:none;color:#9a94c0;font-size:11px;padding:0;cursor:pointer;text-decoration:underline;}
@@ -4810,11 +4843,12 @@ function tZone(pi,c){ return T$(`zone-${pi}-${c}-front`); }
 function tCol(pi,name){ return state.players[pi].front.findIndex(v=>v&&v.name===name); }
 function tColourBtn(colour){ return [...document.querySelectorAll('#devColourBtns button')].find(b=>b.textContent.trim().indexOf(colour)===0) || T$('devColourBtns'); }
 function tOnTop(el){ if(!tVis(el)) return false; const tip=T$('tutTip'); const pe=tip.style.pointerEvents; tip.style.pointerEvents='none'; const r=el.getBoundingClientRect(); const t=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2); tip.style.pointerEvents=pe; return !!t && (t===el || el.contains(t)); }
-function tDoneBtn(){ const b=[...document.querySelectorAll('#devPopup .dpFoot button')].find(b=>/Done/.test(b.textContent)); return tOnTop(b) ? b : T$('nextPhaseBtn'); }
+function tDoneBtn(){ const b=[...document.querySelectorAll('#devPopup .dpFoot button')].find(b=>/Next Phase/.test(b.textContent)); return tOnTop(b) ? b : T$('nextPhaseBtn'); }
 function tOfferBtn(re){ return [...document.querySelectorAll('#riteOfferPrompt button')].find(b=>re.test(b.textContent)) || T$('riteOfferPrompt'); }
 function tEnemyHp(){ return document.querySelector('#board-1 .hpBadge') || T$('board-1'); }
 function tDirectBtn(){ return document.querySelector('#board-1 button[onclick="enemyFaceClick()"]') || T$('board-1'); }
 const tNext = () => T$('nextPhaseBtn');
+const tAttuneBadge = () => document.querySelector('#board-0 .essenceBadge');
 // "tap X, Play, then column N" — points at the hand card until it's selected, then at the column
 function tPlayStep(name, col, intro){
   return { text:()=> (intro||'') + (state.selectedCardId===tHandId(name)
@@ -4841,17 +4875,18 @@ const tWait = turn => ({ wait:true, text:"<b>Opponent's turn.</b> Watch what the
 
 const TUT_STEPS = [
   // ---- Turn 1 ----
-  { info:true, anchor:tEnemyHp, text:"<b>Welcome to Enscra.</b> This guided game is the same for everyone. Bring your opponent from <b>7 HP</b> down to 0 to win. (Real games start at 30.)" },
+  { info:true, anchor:tEnemyHp, text:"<b>Welcome to Enscra.</b> This tutorial will show you the rules. Your opponent has <b>7 HP</b> here to keep it short, but real games always start at <b>30</b>." },
   { info:true, anchor:()=>T$('mPhaseWrap')||T$('phaseStepsList'), text:"Every turn runs through phases: <b>Devotion → Draw → Main 1 → Battle → Main 2 → End</b>." },
   { text:()=> state.selectedAttuneColour==='Red' ? "Now tap your <b>1st column</b> to devote it to Red." : "<b>Devotion phase.</b> On turn 1 you get <b>1 Devotion point</b>. Spending it devotes one of your 5 columns to a colour, so Vessels of that colour can be played there. Tap <b>Red</b>.",
     anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0,0) : tColourBtn('Red'),
     allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>c===0&&col==='Red' }, done:()=> tMe().columns[0].colour==='Red' },
-  { info:true, anchor:()=>tZone(0,0), text:"Column 1 is now <b>Red, Grade 1</b>. A column's Grade is the highest Grade of Vessel it can hold." },
-  tNextStep("Your Devotion is spent. Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  { info:true, anchor:()=>tZone(0,0), text:"Column 1 is now <b>Red, Level 1</b>. A column's Level is the highest Level a Vessel can be to go there. Lower Levels are fine too." },
+  tNextStep("Your Devotion is spent. Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
   tNextStep("<b>Draw phase.</b> Normally you draw a card here, but whoever goes first skips their first draw. Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
-  tPlayStep('Ember Acolyte', 0, "<b>Main phase:</b> play cards. Cards cost <b>Attune</b> (the <b>A</b> badge), a separate pool from Devotion. A Vessel costs its Grade. "),
+  Object.assign(tPlayStep('Ember Acolyte', 0, "<b>Main phase:</b> play cards. Cards cost <b>Attune</b> (the highlighted <b>A</b> counter), a separate pool from Devotion. A Vessel costs its Level. "), { also:tAttuneBadge }),
   { info:true, anchor:()=>tZone(0,0), text:"Ember Acolyte is in play: <b>3 ATK / 1 DEF</b>, bottom-right of the card. It's <b>SICK</b>: Vessels can't attack on the turn they're played." },
-  tNextStep("Nothing else to do this turn. Tap <b>Next Phase</b> until you reach the <b>End</b> phase.", ()=> tPh()==='End'),
+  { info:true, anchor:()=>tZone(0,0), text:"<b>Tip:</b> hold any card to see it up close. Words marked with a <b>?</b> can be tapped to explain exactly what they do." },
+  { text:"There's nothing else to do this turn. Tap <b>Skip to End Phase</b> to jump to the end of your turn.", anchor:()=> tVis(T$('skipToEndBtn')) ? T$('skipToEndBtn') : tNext(), allow:{ next:1 }, done:()=> tPh()==='End' },
   tNextStep("Tap <b>End Turn</b> to pass to your opponent.", ()=> state.current===1),
   tWait(2),
   // ---- Turn 2 ----
@@ -4862,40 +4897,41 @@ const TUT_STEPS = [
     anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0, tMe().columns[1].colour==='Red'?2:1) : tColourBtn('Red'),
     allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>(c===1||c===2)&&col==='Red'&&!tMe().columns[c].colour },
     done:()=> tMe().columns[1].colour==='Red' && tMe().columns[2].colour==='Red' },
-  tNextStep("Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  tNextStep("Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
   tNextStep("<b>Draw phase:</b> you drew <b>The Emberwastes</b>, a Realm. Keep it for later. Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
   tPlayStep('Cinder Runner', 1, "Turn 2 gives you <b>2 Attune</b> too. Play <b>Cinder Runner</b> in your 2nd column. "),
   tNextStep("Off to battle. Tap <b>Next Phase</b>.", ()=> tPh()==='Battle'),
   tAttackStep(()=> state.selectedAttackerZone==='0' ? "Now tap <b>Gale Herald</b> to attack it." : "<b>Battle phase.</b> Acolyte isn't sick any more. Tap <b>Ember Acolyte</b> to pick it as your attacker.", 0, 0),
   { anchor:()=>tOfferBtn(/Yes/), allow:{ acceptRiteOffer:1 }, done:()=> state.pendingRiteOffer && state.pendingRiteOffer.accepted,
-    text:"<b>Combat is a trade:</b> both Vessels hit each other at once, and a Vessel dies if the damage reaches its DEF. Acolyte's 3 ATK kills Herald (2 DEF), but Herald's 2 ATK kills Acolyte (1 DEF) too. An <b>Instant Rite</b> can save it. Tap <b>Yes</b>." },
+    text:"<b>How combat works:</b> both Vessels hit each other at the same time. Each one's ATK is dealt to the other's DEF, and if it reaches that DEF, the Vessel dies. Acolyte (3 ATK) kills Herald (2 DEF), but Herald (2 ATK) kills Acolyte (1 DEF) too. An <b>Instant Rite</b> can save it. Tap <b>Yes</b>." },
   tRiteStep(()=> state.selectedCardId===tHandId('Bulwark') ? "Now tap your <b>Ember Acolyte</b>." : "Tap <b>Bulwark</b> (+3 DEF this turn), then <b>Play</b>.", 'Bulwark', 0),
   { anchor:()=>tOfferBtn(/Resolve/), allow:{ resolveAttackNowFromOffer:1 }, done:()=> !tAi().front[0],
     text:"See the <b>yellow 4</b>? Yellow means a stat has changed from what's printed. Acolyte is now 3/4, so it survives. Tap <b>Resolve Attack Now</b>." },
-  { info:true, anchor:()=>T$('board-1'), text:"Gale Herald is destroyed and goes to <b>The Void</b>, the discard pile. Your opponent lost no HP though: Vessels fighting each other don't hurt players. <b>Direct attacks</b> and some card effects do." },
+  { info:true, anchor:()=> document.querySelector('#board-1 .voidZoneBig') || T$('board-1'), text:"Gale Herald is destroyed and goes to <b>The Void</b> (highlighted), the discard pile. Your opponent lost no HP though: Vessels fighting each other don't hurt players. <b>Direct attacks</b> and some card effects do." },
   tNextStep("That's your turn. Tap <b>Next Phase</b> through to <b>End Turn</b>.", ()=> state.current===1),
   tWait(3),
   // ---- Turn 3 ----
   { info:true, anchor:null, text:"Your opponent played <b>Tide Skirmisher</b> (2/2)." },
-  { text:()=> state.selectedAttuneColour==='Red' ? "Tap your <b>3rd column</b> to raise it to Grade 2." : "<b>Grades.</b> Flame Zealot in your hand is <b>Grade 2</b>, so it needs a Red column at Grade 2 or higher. Devoting the same colour to a column again raises it 1 Grade. Tap <b>Red</b>.",
+  { text:()=> state.selectedAttuneColour==='Red' ? "Tap your <b>3rd column</b> to raise it to Level 2." : "<b>Levels.</b> Flame Zealot in your hand is <b>Level 2</b>, so it needs a Red column at Level 2 or higher. Devoting the same colour to a column again raises it 1 Level. Tap <b>Red</b>.",
     anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0,2) : tColourBtn('Red'),
     allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>c===2&&col==='Red' }, done:()=> tMe().columns[2].grade>=2 },
-  tNextStep("You don't have to spend all your Devotion. Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  tNextStep("You don't have to spend all your Devotion, though it's usually better to use it if you can. Here it doesn't matter. Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
   tNextStep("Tap <b>Next Phase</b> to draw and move on to Main.", ()=> tPh()==='Main1'),
-  tPlayStep('Flame Zealot', 2, "Play <b>Flame Zealot</b> (Grade 2, so it costs 2 Attune) in your 3rd column. "),
+  tPlayStep('Flame Zealot', 2, "Play <b>Flame Zealot</b> (Level 2, so it costs 2 Attune) in your 3rd column. "),
   tNextStep("Tap <b>Next Phase</b> for battle.", ()=> tPh()==='Battle'),
+  { info:true, anchor:()=>tZone(0,1), text:"Read <b>Cinder Runner</b>: when it destroys a Vessel in combat, it deals <b>1 damage to the player</b> too. It will trade with Tide Skirmisher and both will die, but that extra damage makes the trade worth it." },
   tAttackStep(()=> state.selectedAttackerZone==='1' ? "Now tap <b>Tide Skirmisher</b>." : "Attack <b>Tide Skirmisher</b> with <b>Cinder Runner</b>: tap Runner, then Skirmisher.", 1, 1),
   { anchor:()=>tOfferBtn(/^No/), allow:{ declineRiteOffer:1 }, done:()=> !tAi().front[1],
     text:"Runner's 2 ATK already beats Skirmisher's 2 DEF, so you don't need a Rite this time. Tap <b>No</b>." },
-  { info:true, anchor:tEnemyHp, text:"Both Vessels traded and went to The Void. But <b>Cinder Runner's</b> effect hit your opponent for 1 for destroying a Vessel. Tap any card to read its effect." },
+  { info:true, anchor:tEnemyHp, text:"Both Vessels died and went to The Void, and <b>Cinder Runner's</b> effect hit your opponent for 1. They're on <b>6 HP</b>." },
   tAttackStep(()=> state.selectedAttackerZone==='0' ? "Tap <b>Attack directly</b>." : "Their board is empty, so you can hit them <b>directly</b>. Tap <b>Ember Acolyte</b>.", 0, null),
   { anchor:()=>tOfferBtn(/^No/), allow:{ declineRiteOffer:1 }, done:()=> tAi().hp<=3, text:"No Rite needed. Tap <b>No</b>." },
   { info:true, anchor:tEnemyHp, text:"3 damage straight to their HP. They're down to <b>3</b>." },
   tNextStep("End your turn: <b>Next Phase</b> through to <b>End Turn</b>.", ()=> state.current===1),
   tWait(4),
   // ---- Turn 4 ----
-  { info:true, anchor:null, text:"Your opponent raised a Blue column to Grade 2 and played <b>Wavebreak Sentinel</b> (4/2)." },
-  tNextStep("Nothing to devote this turn. Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  { info:true, anchor:null, text:"Your opponent raised a Blue column to Level 2 and played <b>Wavebreak Sentinel</b> (4/2)." },
+  tNextStep("Nothing to devote this turn. Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
   tNextStep("Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
   { text:()=> state.selectedCardId===tHandId('The Emberwastes') ? "Tap <b>The Emberwastes</b> again to cast it." : "<b>Realms</b> change the whole board, and only one can be in play at a time. Tap <b>The Emberwastes</b>, then <b>Play</b>.",
     anchor:()=> tHandEl('The Emberwastes'), allow:{ selectCard:id=>id===tHandId('The Emberwastes'), castSpellCard:id=>id===tHandId('The Emberwastes') },
@@ -4988,11 +5024,12 @@ tutGate('requestNextPhase', true); tutGate('skipToEndPhase', true);
 // ---- tip rendering, run after every render() ----
 function tutTick(){
   if(!TUT.active) return;
-  let guard = 0;
+  let guard = 0; const from = TUT.step;
   while(TUT.step < TUT_STEPS.length && TUT_STEPS[TUT.step].done && TUT_STEPS[TUT.step].done() && guard++<20) TUT.step++;
   tutDrawTip();
+  if(TUT.step!==from) setTimeout(render, 0); // the step moved on: repaint once so the board (e.g. the Devotion popup) matches it
 }
-function tutGotIt(){ TUT.step++; tutTick(); }
+function tutGotIt(){ TUT.step++; render(); }
 function tutLeave(){
   if(!confirm('Leave the tutorial and go back to the main menu?')) return;
   try{ sessionStorage.setItem('enscraSkipIntro','1'); }catch(e){}
@@ -5001,6 +5038,7 @@ function tutLeave(){
 function tutDrawTip(){
   const tip = T$('tutTip'); if(!tip) return;
   if(TUT.hlEl){ TUT.hlEl.classList.remove('tutHL'); TUT.hlEl = null; }
+  if(TUT.hl2El){ TUT.hl2El.classList.remove('tutHL2'); TUT.hl2El = null; }
   const st = TUT_STEPS[TUT.step];
   const zoomOpen = T$('cardZoomOverlay') && T$('cardZoomOverlay').classList.contains('open');
   const txOn = T$('modeTx') && T$('modeTx').classList.contains('on');
@@ -5022,6 +5060,17 @@ function tutDrawTip(){
   let anchor = st.anchor ? st.anchor() : null;
   if(anchor && !tVis(anchor)) anchor = null;
   if(anchor && !st.wait){ anchor.classList.add('tutHL'); TUT.hlEl = anchor; }
+  // a step that asks for a tap on one column: only that column lights up, so other legal-looking
+  // columns (another valid Rite target, a second attacker) can't be mistaken for the one to tap
+  if(anchor && !st.info && /^zone-/.test(anchor.id||'')){
+    document.querySelectorAll('.colBox.placeable, .colBox.targetable').forEach(z=>{
+      if(z===anchor) return;
+      z.classList.remove('placeable','targetable');
+      z.querySelectorAll('.zoneOverlay').forEach(o=>o.remove());
+    });
+  }
+  const also = st.also ? st.also() : null; // a second, dashed highlight on something the text points out
+  if(also && tVis(also) && also!==anchor){ also.classList.add('tutHL2'); TUT.hl2El = also; }
   const W = innerWidth, H = innerHeight, tw = tip.offsetWidth, th = tip.offsetHeight;
   let left, top;
   if(!anchor){ left = (W-tw)/2; top = H*0.42 - th/2; }
