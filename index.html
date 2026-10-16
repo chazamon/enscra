@@ -247,6 +247,11 @@
     align-items:center;justify-content:center;
   }
   #cardZoomOverlay.open{display:flex;}
+  #modeTx{display:none;position:fixed;inset:0;z-index:300;pointer-events:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
+  #modeTx.on{display:flex;}
+  #modeTx .mtRing{width:min(46vmin,230px);height:auto;filter:drop-shadow(0 0 18px rgba(255,215,107,.55));opacity:0;}
+  #modeTx .mtLabel{font-family:Georgia,serif;color:#ffd76b;font-size:20px;letter-spacing:.3em;text-transform:uppercase;text-shadow:0 0 14px rgba(255,215,107,.6);opacity:0;padding-left:.3em;}
+  #modeTx .mtFlash{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,236,170,.95),rgba(255,200,80,.35) 35%,transparent 70%);opacity:0;}
   #soundPanel{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;}
   #soundPanel.open{display:flex;}
   #soundPanel .spCard{width:min(320px,90vw);background:linear-gradient(180deg,#1b1838,#100e22);border:1px solid rgba(255,215,107,.55);border-radius:16px;padding:16px 18px 18px;box-shadow:0 10px 40px rgba(0,0,0,.7);color:#eee;font-family:system-ui,sans-serif;}
@@ -757,6 +762,7 @@ body.mobile #log{display:none;position:fixed;left:8px;right:8px;bottom:calc(8px 
   box-shadow:0 -6px 30px rgba(0,0,0,.7);border-color:#c4a87088;}
 body.mobile.showLog #log{display:block;}
 body.mobile #deflectPrompt,body.mobile #riteOfferPrompt,body.mobile #phaseWarningPrompt{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:110;margin:0;font-size:12.5px;box-shadow:0 -6px 30px rgba(0,0,0,.75);}
+body.mobile #riteOfferPrompt.roPicking{bottom:auto;top:calc(48px + env(safe-area-inset-top,0px));box-shadow:0 6px 30px rgba(0,0,0,.75);}
 body.mobile #deflectPrompt button,body.mobile #riteOfferPrompt button,body.mobile #phaseWarningPrompt button{padding:9px 12px;}
 body.mobile #turnGuideTip{width:min(300px,calc(100vw - 16px));}
 
@@ -999,6 +1005,7 @@ body:not(.mobile) .vesselZone .card.ecard .ecStats{font-size:15px !important;pad
   var el=document.getElementById('enscraIntro');
   var isApp=window.matchMedia&&(matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches);
   if(!isApp){el.remove();return;}
+  try{ if(sessionStorage.getItem('enscraSkipIntro')){ sessionStorage.removeItem('enscraSkipIntro'); el.remove(); return; } }catch(e){}
   var done=false;
   function finish(){if(done)return;done=true;el.style.transition='opacity .25s';el.style.opacity='0';setTimeout(function(){el.remove();},260);}
   el.addEventListener('click',finish);
@@ -1089,6 +1096,16 @@ body:not(.mobile) .vesselZone .card.ecard .ecStats{font-size:15px !important;pad
 <div id="turnGuideTip"></div>
 
 <div id="stickyHud"></div>
+
+<div id="modeTx" aria-hidden="true">
+  <div class="mtFlash"></div>
+  <svg class="mtRing" viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" fill="none" stroke="#ffd76b" stroke-width="2.5"/>
+    <circle cx="100" cy="100" r="88" fill="none" stroke="#ffd76b" stroke-opacity=".35" stroke-width="1" stroke-dasharray="2 6"/>
+    <circle cx="100" cy="22" r="7" fill="#e0473a"/><circle cx="174" cy="76" r="7" fill="#3fae5f"/><circle cx="146" cy="163" r="7" fill="#3f8ce0"/>
+    <circle cx="54" cy="163" r="7" fill="#e6e6e6"/><circle cx="26" cy="76" r="7" fill="#9a5be0"/>
+    <text x="100" y="104" text-anchor="middle" dominant-baseline="middle" font-family="Georgia,serif" font-weight="700" font-size="78" fill="#ffd76b">E</text></svg>
+  <div class="mtLabel" id="modeTxLabel"></div>
+</div>
 
 <div id="soundPanel" onclick="if(event.target===this) closeSoundPanel()">
   <div class="spCard">
@@ -3772,8 +3789,9 @@ function renderRiteOfferPrompt(){
   const el = document.getElementById('riteOfferPrompt');
   if(!el) return;
   const ro = state.pendingRiteOffer;
-  if(!ro){ el.style.display='none'; return; }
+  if(!ro){ el.style.display='none'; el.classList.remove('roPicking'); return; }
   el.style.display='flex';
+  el.classList.toggle('roPicking', !!ro.accepted); // picking a Rite: phones move this box up so the hand stays tappable
   const p = cur();
   if(!ro.accepted){
     const playable = p.hand.filter(c=>c.type==='Rite' && canPlayCard(state.current, c));
@@ -4224,8 +4242,9 @@ function genRoomCode(){
   for(let i=0;i<5;i++) s += chars[Math.floor(Math.random()*chars.length)];
   return s;
 }
-function closeLobby(){
+function closeLobby(label){
   const el = document.getElementById('lobbyOverlay');
+  playModeTransition(typeof label==='string' ? label : (net.isOnline ? 'Online Duel' : 'Same Phone'));
   if(el) el.classList.add('hidden');
   if(music.enabled) setMusicMode('game', musicGameList()); else music.mode = 'game';
   // The board behind the lobby was already painted once at page load (see the unconditional startTurn()
@@ -4261,24 +4280,57 @@ function rollForStartingPlayer(){
 function startAiGame(){
   ai.active = true;
   ai.seat = 1;
-  closeLobby();
+  closeLobby('Vs AI');
   rollForStartingPlayer();
 }
-// Tutorial: vs the AI, but the human always goes first and the step-by-step guide is forced on.
+// Tutorial: a fixed, scripted game vs a scripted AI — same cards, same draws, same moves for everyone.
+// The whole script (decks, AI moves, the step-by-step tips and which taps are allowed) lives in the
+// tutorial block at the bottom of the page — see tutBegin().
 function startTutorial(){
   ai.active = true;
   ai.seat = 1;
-  closeLobby();
-  const firstSeat = opp(ai.seat);
-  state.players.forEach((p,i)=>{
-    p.isStartingPlayer = (i===firstSeat);
-    p.turnCount = 0; p.devotion = 0; p.devotionTotal = 0; p.essence = 0; p.essenceTotal = 0;
-  });
-  state.current = firstSeat;
-  log(`Tutorial — you go first. Follow the tips on screen.`);
-  turnGuideActive = true;
-  turnGuideStepIdx = 0;
-  startTurn();
+  turnGuideActive = false; // the scripted tutorial has its own tips
+  closeLobby('Tutorial');
+  tutBegin();
+}
+
+// Menu -> game transition: the menu swells and fades, a gold ring with the mode name blooms, then
+// bursts outward to reveal the board. Pure decoration over the top — the game is already set up
+// underneath while it plays, nothing waits on it.
+function playModeTransition(label){
+  const tx = document.getElementById('modeTx');
+  const lobby = document.getElementById('lobbyOverlay');
+  if(!tx || !tx.animate) return;
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('modeTxLabel').textContent = label || '';
+  tx.classList.add('on');
+  const game = document.getElementById('mGame') || document.getElementById('fitWrap');
+  // a snapshot of the menu, animated out over the top (the real one is hidden straight away)
+  let ghost = null;
+  if(lobby && !reduce){
+    ghost = lobby.cloneNode(true); ghost.id = 'lobbyGhost'; ghost.classList.remove('hidden');
+    ghost.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+    ghost.style.pointerEvents = 'none'; ghost.style.zIndex = '299';
+    document.body.appendChild(ghost);
+    ghost.animate([{opacity:1, scale:'1', filter:'blur(0px)'},{opacity:0, scale:'1.18', filter:'blur(8px)'}],
+      {duration:520, easing:'cubic-bezier(.4,0,.7,1)', fill:'forwards'}).onfinish = ()=>ghost.remove();
+  }
+  if(reduce){
+    tx.animate([{opacity:1},{opacity:0}],{duration:400,fill:'forwards'}).onfinish=()=>tx.classList.remove('on');
+    return;
+  }
+  const ring = tx.querySelector('.mtRing'), lab = tx.querySelector('.mtLabel'), flash = tx.querySelector('.mtFlash');
+  tx.animate([{backgroundColor:'rgba(4,3,10,0)'},{backgroundColor:'rgba(4,3,10,1)',offset:.3},{backgroundColor:'rgba(4,3,10,1)',offset:.62},{backgroundColor:'rgba(4,3,10,0)'}],
+    {duration:1500, easing:'linear', fill:'forwards'}).onfinish = ()=>{ tx.classList.remove('on'); if(typeof render==='function') render(); };
+  ring.animate([{opacity:0, transform:'scale(.4) rotate(-90deg)'},{opacity:1, transform:'scale(1) rotate(0deg)', offset:.35},
+                {opacity:1, transform:'scale(1.06) rotate(25deg)', offset:.6},{opacity:0, transform:'scale(3.2) rotate(60deg)'}],
+    {duration:1500, easing:'cubic-bezier(.3,.7,.4,1)', fill:'forwards'});
+  lab.animate([{opacity:0, transform:'translateY(14px)', letterSpacing:'.6em'},{opacity:0, offset:.2},{opacity:1, transform:'none', letterSpacing:'.3em', offset:.42},
+               {opacity:1, offset:.6},{opacity:0, transform:'translateY(-6px)', letterSpacing:'.5em'}],
+    {duration:1500, easing:'ease-out', fill:'forwards'});
+  flash.animate([{opacity:0},{opacity:0, offset:.58},{opacity:.85, offset:.64},{opacity:0}],{duration:1500, fill:'forwards'});
+  if(game) game.animate([{opacity:0, scale:'1.08', filter:'blur(6px)'},{opacity:0, scale:'1.08', filter:'blur(6px)', offset:.58},{opacity:1, scale:'1', filter:'blur(0px)'}],
+    {duration:1500, easing:'cubic-bezier(.2,.8,.3,1)'});
 }
 function startOnlineGame(seat, roomCode){
   const statusEl = document.getElementById('lobbyStatus');
@@ -4633,7 +4685,12 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
     var cardObj=cardRegistry[id]||{};
     zPlay.textContent = discard ? 'Discard this card' : (cardObj.type==='Vessel' ? 'Play — pick a column' : 'Play this card');
     zPlay.disabled = parseFloat(w.style.opacity||'1')<1 && !discard;
-    zoomCard(id, c, canAct ? function(){ selectCard(id); } : null);
+    zoomCard(id, c, canAct ? function(){
+      selectCard(id);
+      // Realms and no-target Rites (Foresight) have nothing else to tap, so Play casts them straight away
+      var co=cardRegistry[id], m=co&&mech(co.name);
+      if(co && state.selectedCardId===id && (co.type==='Realm' || (m&&m.riteEffect&&m.riteEffect.drawCard))) selectCard(id);
+    } : null);
   },true);
   document.body.classList.add('mobile');
 
@@ -4689,6 +4746,334 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
   render();
   window.addEventListener('resize',function(){ setTimeout(render,150); });
 })();
+</script>
+
+<div id="tutTip"></div>
+<div id="tutVictory" aria-live="polite">
+  <div class="tvRays"></div>
+  <div class="tvInner">
+    <div class="tvTitle">VICTORY</div>
+    <div class="tvSub">Tutorial complete. You know how to play Enscra.</div>
+    <div class="tvCount">Returning to main menu in <b id="tvNum">5</b></div>
+  </div>
+</div>
+<style>
+#tutTip{display:none;position:fixed;z-index:350;width:min(300px,calc(100vw - 24px));box-sizing:border-box;padding:12px 14px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(30,26,62,.97),rgba(16,14,34,.97));border:1px solid rgba(255,215,107,.7);
+  box-shadow:0 8px 30px rgba(0,0,0,.65),0 0 18px rgba(255,215,107,.18);color:#eee;font-family:system-ui,sans-serif;}
+#tutTip.open{display:block;}
+#tutTip .ttHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+#tutTip .ttStep{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ffd76b;}
+#tutTip .ttLeave{background:none;border:none;color:#9a94c0;font-size:11px;padding:0;cursor:pointer;text-decoration:underline;}
+#tutTip .ttText{font-size:13.5px;line-height:1.5;}
+#tutTip .ttText b{color:#ffe7a3;}
+#tutTip .ttBtns{display:flex;justify-content:flex-end;margin-top:10px;}
+#tutTip .ttBtns button{padding:8px 16px;border-radius:999px;font-weight:800;font-size:13.5px;background:linear-gradient(180deg,#ffe28a,#e0a93a);color:#1c1204;border:1px solid #fff2c4;}
+#tutTip .ttWait{margin-top:8px;font-size:12px;color:#b8b0e0;font-style:italic;}
+#tutTip.nudge{animation:tutShake .4s;}
+@keyframes tutShake{0%,100%{translate:0}20%{translate:-7px 0}40%{translate:7px 0}60%{translate:-4px 0}80%{translate:4px 0}}
+.tutHL{outline:3px solid #ffd76b !important;outline-offset:2px;border-radius:8px;animation:tutPulse 1.1s ease-in-out infinite !important;position:relative;z-index:5;}
+@keyframes tutPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,215,107,.7)}50%{box-shadow:0 0 0 8px rgba(255,215,107,0)}}
+#tutVictory{display:none;position:fixed;inset:0;z-index:500;align-items:center;justify-content:center;overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,rgba(60,40,10,.92),rgba(4,3,10,.97) 70%);}
+#tutVictory.on{display:flex;animation:tvIn .5s ease-out;}
+#tutVictory .tvRays{position:absolute;left:50%;top:45%;width:180vmax;height:180vmax;margin:-90vmax 0 0 -90vmax;opacity:.35;
+  background:repeating-conic-gradient(from 0deg,rgba(255,215,107,.5) 0deg 6deg,transparent 6deg 20deg);animation:tvSpin 18s linear infinite;
+  -webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%);}
+#tutVictory .tvInner{position:relative;text-align:center;padding:24px;}
+#tutVictory .tvTitle{font-family:Georgia,serif;font-weight:700;font-size:clamp(44px,14vw,84px);letter-spacing:.14em;padding-left:.14em;color:#ffd76b;
+  text-shadow:0 0 24px rgba(255,215,107,.8),0 4px 0 #6b4a10;animation:tvPop .7s cubic-bezier(.2,1.6,.4,1) both;}
+#tutVictory .tvSub{margin-top:10px;color:#f3e6c4;font-size:16px;font-family:system-ui,sans-serif;animation:tvFade .6s .45s both;}
+#tutVictory .tvCount{margin-top:26px;color:#c9c1e8;font-size:15px;font-family:system-ui,sans-serif;animation:tvFade .6s .9s both;}
+#tutVictory .tvCount b{display:inline-block;min-width:1.2em;color:#ffd76b;font-size:22px;}
+#tutVictory .tvCount b.tick{animation:tvTick .45s ease-out;}
+@keyframes tvIn{from{opacity:0}to{opacity:1}}
+@keyframes tvSpin{to{transform:rotate(360deg)}}
+@keyframes tvPop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@keyframes tvFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes tvTick{from{transform:scale(1.8);opacity:.3}to{transform:none;opacity:1}}
+</style>
+<script>
+// ===================== Scripted tutorial =====================================================
+// One fixed game for every new player: stacked decks (same hand, same draws), a scripted opponent,
+// and a list of steps. Each step shows a tip pointed at the thing to tap, and only the action that
+// step asks for is allowed (anything else just shakes the tip) — so everyone plays exactly the same
+// game and sees every core rule once. Opponent starts on 7 HP so it's over in 4 of your turns.
+const TUT = { active:false, step:0, depth:0, aiTurn:-1, aiA:0, aiP:0, hlEl:null, won:false };
+const T$ = id => document.getElementById(id);
+const tMe = () => state.players[0], tAi = () => state.players[1];
+const tPh = () => PHASES[state.phaseIdx];
+const tVis = el => !!(el && el.isConnected && el.getClientRects().length && getComputedStyle(el).visibility!=='hidden');
+function tHandId(name){ const c = tMe().hand.find(c=>c.name===name); return c ? c.id : null; }
+function tHandEl(name){ const id = tHandId(name); return id!=null ? T$('cardEl-'+id) : null; }
+function tZone(pi,c){ return T$(`zone-${pi}-${c}-front`); }
+function tCol(pi,name){ return state.players[pi].front.findIndex(v=>v&&v.name===name); }
+function tColourBtn(colour){ return [...document.querySelectorAll('#devColourBtns button')].find(b=>b.textContent.trim().indexOf(colour)===0) || T$('devColourBtns'); }
+function tOnTop(el){ if(!tVis(el)) return false; const tip=T$('tutTip'); const pe=tip.style.pointerEvents; tip.style.pointerEvents='none'; const r=el.getBoundingClientRect(); const t=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2); tip.style.pointerEvents=pe; return !!t && (t===el || el.contains(t)); }
+function tDoneBtn(){ const b=[...document.querySelectorAll('#devPopup .dpFoot button')].find(b=>/Done/.test(b.textContent)); return tOnTop(b) ? b : T$('nextPhaseBtn'); }
+function tOfferBtn(re){ return [...document.querySelectorAll('#riteOfferPrompt button')].find(b=>re.test(b.textContent)) || T$('riteOfferPrompt'); }
+function tEnemyHp(){ return document.querySelector('#board-1 .hpBadge') || T$('board-1'); }
+function tDirectBtn(){ return document.querySelector('#board-1 button[onclick="enemyFaceClick()"]') || T$('board-1'); }
+const tNext = () => T$('nextPhaseBtn');
+// "tap X, Play, then column N" — points at the hand card until it's selected, then at the column
+function tPlayStep(name, col, intro){
+  return { text:()=> (intro||'') + (state.selectedCardId===tHandId(name)
+              ? `Now tap your glowing <b>${['1st','2nd','3rd','4th','5th'][col]} column</b> to place it.`
+              : `Tap <b>${name}</b>, then <b>Play</b>${intro?'':''}.`),
+    anchor:()=> state.selectedCardId===tHandId(name) ? tZone(0,col) : tHandEl(name),
+    allow:{ selectCard:id=>id===tHandId(name), placeSelected:c=>c===col },
+    done:()=> tCol(0,name)>=0 };
+}
+// pick an attacker, then a target (target null = attack the player directly)
+function tAttackStep(text, atkCol, tgtCol){
+  return { text,
+    anchor:()=> state.selectedAttackerZone===String(atkCol) ? (tgtCol==null ? tDirectBtn() : tZone(1,tgtCol)) : tZone(0,atkCol),
+    allow:{ selectAttacker:c=>c===atkCol, enemyFaceClick:()=>tgtCol==null, resolveAttack:(t,d)=> tgtCol==null ? !!d : (t===tgtCol && !d) },
+    done:()=> !!state.pendingRiteOffer };
+}
+function tRiteStep(text, name, col){
+  return { text, anchor:()=> state.selectedCardId===tHandId(name) ? tZone(0,col) : tHandEl(name),
+    allow:{ selectCard:id=>id===tHandId(name), castRiteAtZone:(id,pi,c)=>pi===0 && c===col },
+    done:()=> tHandId(name)==null };
+}
+const tNextStep = (text, done) => ({ text, anchor:()=> tPh()==='Devotion' ? tDoneBtn() : tNext(), allow:{ next:1 }, done });
+const tWait = turn => ({ wait:true, text:"<b>Opponent's turn.</b> Watch what they do.", anchor:()=>T$('board-1'), done:()=> state.current===0 && tMe().turnCount===turn });
+
+const TUT_STEPS = [
+  // ---- Turn 1 ----
+  { info:true, anchor:tEnemyHp, text:"<b>Welcome to Enscra.</b> This guided game is the same for everyone. Bring your opponent from <b>7 HP</b> down to 0 to win. (Real games start at 30.)" },
+  { info:true, anchor:()=>T$('mPhaseWrap')||T$('phaseStepsList'), text:"Every turn runs through phases: <b>Devotion → Draw → Main 1 → Battle → Main 2 → End</b>." },
+  { text:()=> state.selectedAttuneColour==='Red' ? "Now tap your <b>1st column</b> to devote it to Red." : "<b>Devotion phase.</b> On turn 1 you get <b>1 Devotion point</b>. Spending it devotes one of your 5 columns to a colour, so Vessels of that colour can be played there. Tap <b>Red</b>.",
+    anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0,0) : tColourBtn('Red'),
+    allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>c===0&&col==='Red' }, done:()=> tMe().columns[0].colour==='Red' },
+  { info:true, anchor:()=>tZone(0,0), text:"Column 1 is now <b>Red, Grade 1</b>. A column's Grade is the highest Grade of Vessel it can hold." },
+  tNextStep("Your Devotion is spent. Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  tNextStep("<b>Draw phase.</b> Normally you draw a card here, but whoever goes first skips their first draw. Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
+  tPlayStep('Ember Acolyte', 0, "<b>Main phase:</b> play cards. Cards cost <b>Attune</b> (the <b>A</b> badge), a separate pool from Devotion. A Vessel costs its Grade. "),
+  { info:true, anchor:()=>tZone(0,0), text:"Ember Acolyte is in play: <b>3 ATK / 1 DEF</b>, bottom-right of the card. It's <b>SICK</b>: Vessels can't attack on the turn they're played." },
+  tNextStep("Nothing else to do this turn. Tap <b>Next Phase</b> until you reach the <b>End</b> phase.", ()=> tPh()==='End'),
+  tNextStep("Tap <b>End Turn</b> to pass to your opponent.", ()=> state.current===1),
+  tWait(2),
+  // ---- Turn 2 ----
+  { info:true, anchor:null, text:"Your opponent devoted a White column and played <b>Gale Herald</b> (2 ATK / 2 DEF)." },
+  { text:()=> state.selectedAttuneColour==='Red'
+        ? `Tap your <b>${tMe().columns[1].colour==='Red'?'3rd':'2nd'} column</b>.`
+        : "Turn 2 gives you <b>2 Devotion</b>. Devote <b>Red</b> to your <b>2nd and 3rd columns</b>: tap Red, then a column, twice.",
+    anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0, tMe().columns[1].colour==='Red'?2:1) : tColourBtn('Red'),
+    allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>(c===1||c===2)&&col==='Red'&&!tMe().columns[c].colour },
+    done:()=> tMe().columns[1].colour==='Red' && tMe().columns[2].colour==='Red' },
+  tNextStep("Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  tNextStep("<b>Draw phase:</b> you drew <b>The Emberwastes</b>, a Realm. Keep it for later. Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
+  tPlayStep('Cinder Runner', 1, "Turn 2 gives you <b>2 Attune</b> too. Play <b>Cinder Runner</b> in your 2nd column. "),
+  tNextStep("Off to battle. Tap <b>Next Phase</b>.", ()=> tPh()==='Battle'),
+  tAttackStep(()=> state.selectedAttackerZone==='0' ? "Now tap <b>Gale Herald</b> to attack it." : "<b>Battle phase.</b> Acolyte isn't sick any more. Tap <b>Ember Acolyte</b> to pick it as your attacker.", 0, 0),
+  { anchor:()=>tOfferBtn(/Yes/), allow:{ acceptRiteOffer:1 }, done:()=> state.pendingRiteOffer && state.pendingRiteOffer.accepted,
+    text:"<b>Combat is a trade:</b> both Vessels hit each other at once, and a Vessel dies if the damage reaches its DEF. Acolyte's 3 ATK kills Herald (2 DEF), but Herald's 2 ATK kills Acolyte (1 DEF) too. An <b>Instant Rite</b> can save it. Tap <b>Yes</b>." },
+  tRiteStep(()=> state.selectedCardId===tHandId('Bulwark') ? "Now tap your <b>Ember Acolyte</b>." : "Tap <b>Bulwark</b> (+3 DEF this turn), then <b>Play</b>.", 'Bulwark', 0),
+  { anchor:()=>tOfferBtn(/Resolve/), allow:{ resolveAttackNowFromOffer:1 }, done:()=> !tAi().front[0],
+    text:"See the <b>yellow 4</b>? Yellow means a stat has changed from what's printed. Acolyte is now 3/4, so it survives. Tap <b>Resolve Attack Now</b>." },
+  { info:true, anchor:()=>T$('board-1'), text:"Gale Herald is destroyed and goes to <b>The Void</b>, the discard pile. Your opponent lost no HP though: Vessels fighting each other don't hurt players. <b>Direct attacks</b> and some card effects do." },
+  tNextStep("That's your turn. Tap <b>Next Phase</b> through to <b>End Turn</b>.", ()=> state.current===1),
+  tWait(3),
+  // ---- Turn 3 ----
+  { info:true, anchor:null, text:"Your opponent played <b>Tide Skirmisher</b> (2/2)." },
+  { text:()=> state.selectedAttuneColour==='Red' ? "Tap your <b>3rd column</b> to raise it to Grade 2." : "<b>Grades.</b> Flame Zealot in your hand is <b>Grade 2</b>, so it needs a Red column at Grade 2 or higher. Devoting the same colour to a column again raises it 1 Grade. Tap <b>Red</b>.",
+    anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0,2) : tColourBtn('Red'),
+    allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>c===2&&col==='Red' }, done:()=> tMe().columns[2].grade>=2 },
+  tNextStep("You don't have to spend all your Devotion. Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  tNextStep("Tap <b>Next Phase</b> to draw and move on to Main.", ()=> tPh()==='Main1'),
+  tPlayStep('Flame Zealot', 2, "Play <b>Flame Zealot</b> (Grade 2, so it costs 2 Attune) in your 3rd column. "),
+  tNextStep("Tap <b>Next Phase</b> for battle.", ()=> tPh()==='Battle'),
+  tAttackStep(()=> state.selectedAttackerZone==='1' ? "Now tap <b>Tide Skirmisher</b>." : "Attack <b>Tide Skirmisher</b> with <b>Cinder Runner</b>: tap Runner, then Skirmisher.", 1, 1),
+  { anchor:()=>tOfferBtn(/^No/), allow:{ declineRiteOffer:1 }, done:()=> !tAi().front[1],
+    text:"Runner's 2 ATK already beats Skirmisher's 2 DEF, so you don't need a Rite this time. Tap <b>No</b>." },
+  { info:true, anchor:tEnemyHp, text:"Both Vessels traded and went to The Void. But <b>Cinder Runner's</b> effect hit your opponent for 1 for destroying a Vessel. Tap any card to read its effect." },
+  tAttackStep(()=> state.selectedAttackerZone==='0' ? "Tap <b>Attack directly</b>." : "Their board is empty, so you can hit them <b>directly</b>. Tap <b>Ember Acolyte</b>.", 0, null),
+  { anchor:()=>tOfferBtn(/^No/), allow:{ declineRiteOffer:1 }, done:()=> tAi().hp<=3, text:"No Rite needed. Tap <b>No</b>." },
+  { info:true, anchor:tEnemyHp, text:"3 damage straight to their HP. They're down to <b>3</b>." },
+  tNextStep("End your turn: <b>Next Phase</b> through to <b>End Turn</b>.", ()=> state.current===1),
+  tWait(4),
+  // ---- Turn 4 ----
+  { info:true, anchor:null, text:"Your opponent raised a Blue column to Grade 2 and played <b>Wavebreak Sentinel</b> (4/2)." },
+  tNextStep("Nothing to devote this turn. Tap <b>Done</b>.", ()=> tPh()!=='Devotion'),
+  tNextStep("Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
+  { text:()=> state.selectedCardId===tHandId('The Emberwastes') ? "Tap <b>The Emberwastes</b> again to cast it." : "<b>Realms</b> change the whole board, and only one can be in play at a time. Tap <b>The Emberwastes</b>, then <b>Play</b>.",
+    anchor:()=> tHandEl('The Emberwastes'), allow:{ selectCard:id=>id===tHandId('The Emberwastes'), castSpellCard:id=>id===tHandId('The Emberwastes') },
+    done:()=> !!(state.realm && state.realm.name==='The Emberwastes') },
+  { info:true, anchor:()=>tZone(0,2), text:"The Emberwastes gives every <b>Red</b> Vessel +1 ATK, and every <b>Green</b> Vessel −1 ATK, for <b>both</b> players. That's the catch with Realms. Your Red Vessels' ATK just turned yellow." },
+  tNextStep("Tap <b>Next Phase</b> for battle.", ()=> tPh()==='Battle'),
+  { info:true, anchor:()=>tZone(0,2), text:"<b>Flame Zealot</b> has <b>Breakthrough</b>: when it destroys a Vessel, any ATK beyond that Vessel's DEF carries through to the player." },
+  tAttackStep(()=> state.selectedAttackerZone==='2' ? "Now tap <b>Wavebreak Sentinel</b>." : "Attack <b>Wavebreak Sentinel</b> with <b>Flame Zealot</b>.", 2, 1),
+  { anchor:()=>tOfferBtn(/Yes/), allow:{ acceptRiteOffer:1 }, done:()=> state.pendingRiteOffer && state.pendingRiteOffer.accepted, text:"Let's make it hurt. Tap <b>Yes</b>." },
+  tRiteStep(()=> state.selectedCardId===tHandId('Searing Strike') ? "Now tap your <b>Flame Zealot</b>." : "Tap <b>Searing Strike</b> (+2 ATK this turn), then <b>Play</b>.", 'Searing Strike', 2),
+  { anchor:()=>tOfferBtn(/Resolve/), allow:{ resolveAttackNowFromOffer:1 }, done:()=> state.gameOver,
+    text:"Flame Zealot is now <b>7 ATK</b>. Sentinel has 2 DEF, so <b>5 breaks through</b>, and they only have 3 HP. Tap <b>Resolve Attack Now</b>." },
+  { wait:true, anchor:null, text:"", done:()=>false },
+];
+
+// What the scripted opponent does on each of its turns: [column, colour] devotions, then [card, column] plays.
+const TUT_AI_PLAN = {
+  1: { attune:[[0,'White']], place:[['Gale Herald',0]] },
+  2: { attune:[[1,'Blue']],  place:[['Tide Skirmisher',1]] },
+  3: { attune:[[1,'Blue']],  place:[['Wavebreak Sentinel',1]] },
+};
+
+function tutStack(pl, handNames, drawNames){
+  const pool = [...pl.hand, ...pl.deck];
+  const take = n => { const i = pool.findIndex(c=>c.name===n); return i>=0 ? pool.splice(i,1)[0] : null; };
+  pl.hand = handNames.map(take).filter(Boolean);
+  const top = drawNames.map(take).filter(Boolean);
+  pool.sort((a,b)=> a.name<b.name?-1:a.name>b.name?1:a.id-b.id); // no shuffle: same order every time
+  pl.deck = pool.concat(top.reverse()); // the deck draws from the end, so drawNames[0] comes first
+}
+function tutBegin(){
+  TUT.active = true; TUT.step = 0; TUT.aiTurn = -1; TUT.won = false;
+  turnGuideActive = false;
+  const noDeflect = TIDEWIND_RITES.filter(r=>r.name!=='Deflect');
+  const me = newPlayer("Player 1 — Emberroot (Red/Green)", EMBERROOT_VESSELS, EMBERROOT_RITES, EMBERROOT_REALMS, true);
+  const them = newPlayer("Player 2 — Tidewind (White/Blue)", TIDEWIND_VESSELS, noDeflect, TIDEWIND_REALMS, false);
+  tutStack(me, ['Ember Acolyte','Cinder Runner','Bulwark','Searing Strike','Flame Zealot'], ['The Emberwastes','Rootling Guard','Stoneskin Tender']);
+  tutStack(them, ['Gale Herald','Tide Skirmisher','Wavebreak Sentinel','Foresight','Crosswind'], ['Current Adept','Riptide Caller','Whisperwind Page']);
+  them.hp = 7;
+  Object.assign(state, { players:[me, them], current:0, phaseIdx:0, selectedCardId:null, selectedAttackerZone:null,
+    selectedAttuneColour:null, gameOver:false, pendingEffect:null, pendingAttack:null, pendingRiteOffer:null,
+    pendingPhaseWarning:null, realm:null, reattuneStaging:null });
+  log(`Tutorial — follow the tips on screen.`);
+  startTurn();
+}
+
+// ---- action gate: during your turn, only what the current step asks for goes through ----
+function tutNudge(){
+  const tip = T$('tutTip'); if(!tip) return;
+  tip.classList.remove('nudge'); void tip.offsetWidth; tip.classList.add('nudge');
+}
+function tutGate(name, asNext){
+  const orig = window[name];
+  if(typeof orig!=='function') return;
+  window[name] = function(...a){
+    if(!TUT.active || TUT.depth>0 || state.current!==0 || state.gameOver) return orig.apply(this, a);
+    const st = TUT_STEPS[TUT.step];
+    const rule = st && st.allow && (asNext ? st.allow.next : st.allow[name]);
+    const ok = rule===1 || (typeof rule==='function' && rule(...a));
+    if(!ok){ tutNudge(); if(name==='zoneClick'||name==='selectAttuneColour') render(); return; }
+    TUT.depth++;
+    try{ return (asNext && name==='requestNextPhase') ? nextPhase() : orig.apply(this, a); } // tutorial: no "are you sure?" prompts
+    finally{ TUT.depth--; }
+  };
+}
+['selectAttuneColour','attuneColumn','selectCard','placeSelected','castRiteAtZone','castSpellCard','selectAttacker',
+ 'resolveAttack','enemyFaceClick','acceptRiteOffer','declineRiteOffer','resolveAttackNowFromOffer','discardCard'].forEach(n=>tutGate(n));
+tutGate('requestNextPhase', true); tutGate('skipToEndPhase', true);
+
+// ---- scripted opponent ----
+(function(){
+  const baseAiStep = aiStep;
+  aiStep = function(){
+    if(!TUT.active) return baseAiStep();
+    if(state.gameOver || state.current!==1) return;
+    if(state.pendingEffect){ state.pendingEffect = null; render(); return; }
+    const a = tAi(), plan = TUT_AI_PLAN[a.turnCount] || {attune:[], place:[]};
+    if(TUT.aiTurn!==a.turnCount){ TUT.aiTurn = a.turnCount; TUT.aiA = 0; TUT.aiP = 0; }
+    const ph = tPh();
+    if(ph==='Devotion' && TUT.aiA<plan.attune.length){ const [c,col] = plan.attune[TUT.aiA++]; attuneColumn(c, col, attuneTargetGrade(1,c,col)); return; }
+    if(ph==='Main1' && TUT.aiP<plan.place.length){
+      const [n,c] = plan.place[TUT.aiP++]; const card = a.hand.find(x=>x.name===n);
+      if(card){ state.selectedCardId = card.id; placeSelected(c); } else render();
+      return;
+    }
+    nextPhase();
+  };
+})();
+
+// ---- tip rendering, run after every render() ----
+function tutTick(){
+  if(!TUT.active) return;
+  let guard = 0;
+  while(TUT.step < TUT_STEPS.length && TUT_STEPS[TUT.step].done && TUT_STEPS[TUT.step].done() && guard++<20) TUT.step++;
+  tutDrawTip();
+}
+function tutGotIt(){ TUT.step++; tutTick(); }
+function tutLeave(){
+  if(!confirm('Leave the tutorial and go back to the main menu?')) return;
+  try{ sessionStorage.setItem('enscraSkipIntro','1'); }catch(e){}
+  location.reload();
+}
+function tutDrawTip(){
+  const tip = T$('tutTip'); if(!tip) return;
+  if(TUT.hlEl){ TUT.hlEl.classList.remove('tutHL'); TUT.hlEl = null; }
+  const st = TUT_STEPS[TUT.step];
+  const zoomOpen = T$('cardZoomOverlay') && T$('cardZoomOverlay').classList.contains('open');
+  const txOn = T$('modeTx') && T$('modeTx').classList.contains('on');
+  if(!TUT.active || !st || TUT.won || txOn || (st.wait && !st.text)){ tip.classList.remove('open'); return; }
+  if(zoomOpen){
+    // the card inspector is open: point at its Play button instead of covering it
+    tip.classList.remove('open');
+    const pb = T$('mZoomPlay');
+    if(st.allow && (st.allow.selectCard||st.allow.discardCard) && tVis(pb)){ pb.classList.add('tutHL'); TUT.hlEl = pb; }
+    return;
+  }
+  const text = typeof st.text==='function' ? st.text() : st.text;
+  const total = TUT_STEPS.length - 1;
+  tip.innerHTML = `<div class="ttHead"><span class="ttStep">Tutorial · ${Math.min(TUT.step+1,total)} / ${total}</span><button class="ttLeave" onclick="tutLeave()">Leave</button></div>
+    <div class="ttText">${text}</div>`
+    + (st.info ? `<div class="ttBtns"><button onclick="tutGotIt()">Got it →</button></div>` : '')
+    + (st.wait ? `<div class="ttWait">Opponent is thinking…</div>` : '');
+  tip.classList.add('open');
+  let anchor = st.anchor ? st.anchor() : null;
+  if(anchor && !tVis(anchor)) anchor = null;
+  if(anchor && !st.wait){ anchor.classList.add('tutHL'); TUT.hlEl = anchor; }
+  const W = innerWidth, H = innerHeight, tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left, top;
+  if(!anchor){ left = (W-tw)/2; top = H*0.42 - th/2; }
+  else {
+    const r = anchor.getBoundingClientRect();
+    left = Math.max(10, Math.min(r.left + r.width/2 - tw/2, W - tw - 10));
+    const below = r.bottom + 12, above = r.top - th - 12;
+    top = (below + th <= H - 8) ? below : (above >= 8 ? above : Math.max(8, Math.min(H - th - 8, H*0.42 - th/2)));
+  }
+  tip.style.left = Math.round(left)+'px'; tip.style.top = Math.round(top)+'px';
+}
+(function(){
+  const baseRender = render;
+  render = function(){ const r = baseRender.apply(this, arguments); try{ tutTick(); }catch(e){ console.error(e); } return r; };
+  window.addEventListener('resize', ()=>{ if(TUT.active) tutDrawTip(); });
+  // the card inspector opens/closes without a render — keep the tip in step with it
+  const zo = T$('cardZoomOverlay');
+  if(zo && window.MutationObserver) new MutationObserver(()=>{ if(TUT.active) setTimeout(tutDrawTip, 30); }).observe(zo, {attributes:true, attributeFilter:['class']});
+})();
+
+// ---- victory -> back to the main menu ----
+(function(){
+  const baseCheckWin = checkWin;
+  checkWin = function(){
+    baseCheckWin.apply(this, arguments);
+    if(TUT.active && state.gameOver && !TUT.won && tAi().hp<=0){
+      TUT.won = true;
+      try{ localStorage.setItem('enscraTutorialDone','1'); localStorage.setItem('enscraSeenTurnGuide','1'); }catch(e){}
+      setTimeout(tutVictory, 1100); // let the final hit land first
+    }
+  };
+})();
+function tutVictory(){
+  const wo = T$('winOverlay'); if(wo) wo.style.display = 'none';
+  T$('tutTip').classList.remove('open');
+  const v = T$('tutVictory'); v.classList.add('on');
+  playSfx('devotion');
+  let n = 5; const num = T$('tvNum'); num.textContent = n;
+  const iv = setInterval(()=>{
+    n--;
+    if(n<=0){
+      clearInterval(iv); num.textContent = '0';
+      try{ sessionStorage.setItem('enscraSkipIntro','1'); }catch(e){}
+      const fade = document.createElement('div');
+      fade.style.cssText = 'position:fixed;inset:0;background:#04030a;z-index:600;opacity:0;transition:opacity .45s';
+      document.body.appendChild(fade); requestAnimationFrame(()=>{ fade.style.opacity = '1'; });
+      setTimeout(()=>location.reload(), 480);
+      return;
+    }
+    num.textContent = n; num.classList.remove('tick'); void num.offsetWidth; num.classList.add('tick');
+  }, 1000);
+}
 </script>
 
 </body>
