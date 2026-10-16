@@ -1675,7 +1675,7 @@ function setSfxVolume(v){
 // ---- Background music ----------------------------------------------------------------------------
 // Loopable tracks live as separate files in the music/ folder next to index.html (too big to embed).
 // Any file that's missing is just skipped, so tracks can be added one at a time. The main menu plays
-// menu.ogg; a game plays the faction tracks of the two decks in it, swapping on a crossfade every few loops.
+// menu.ogg; a game plays the faction tracks of the two decks in it, each song playing once then crossfading into the next.
 const MUSIC_DIR = 'music/';
 const MUSIC_MENU = ['menu'];
 const MUSIC_GAME_DEFAULT = ['red','green','blue','white']; // Emberroot (Red/Green) vs Tidewind (White/Blue)
@@ -1684,7 +1684,7 @@ const music = {
   volume: readVol('enscraMusicVol', 0.5),
   el: null, list: [], idx: 0, loops: 0, mode: null, started: false, missing: {}, fadeTimer: null,
 };
-const MUSIC_LOOPS_BEFORE_SWAP = 3;
+const MUSIC_LOOPS_BEFORE_SWAP = 1; // full songs: play each once, then crossfade into the next
 function musicTarget(){ return music.enabled ? music.volume * 0.6 : 0; } // 0.6 keeps 100% from drowning the effects
 function musicFade(el, to, ms, after){
   if(!el) return;
@@ -1723,8 +1723,9 @@ function musicPlayIndex(i, tries){
 // mode: 'menu' or 'game'. Browsers only allow audio after a tap, so this is also re-tried on the first tap.
 function setMusicMode(mode, list){
   music.mode = mode;
-  music.list = (list || (mode==='menu' ? MUSIC_MENU.concat(MUSIC_GAME_DEFAULT) : MUSIC_GAME_DEFAULT)).slice();
-  if(mode==='game'){ music.list.sort(()=>Math.random()-.5); }
+  const shuffle = l => l.slice().sort(()=>Math.random()-.5);
+  // menu: menu.ogg if there is one, otherwise all five faction songs in a random order
+  music.list = mode==='menu' ? MUSIC_MENU.concat(shuffle(['red','green','blue','white','purple'])) : shuffle(list || MUSIC_GAME_DEFAULT);
   music.started = true;
   musicPlayIndex(0);
 }
