@@ -247,6 +247,20 @@
     align-items:center;justify-content:center;
   }
   #cardZoomOverlay.open{display:flex;}
+  #soundPanel{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;}
+  #soundPanel.open{display:flex;}
+  #soundPanel .spCard{width:min(320px,90vw);background:linear-gradient(180deg,#1b1838,#100e22);border:1px solid rgba(255,215,107,.55);border-radius:16px;padding:16px 18px 18px;box-shadow:0 10px 40px rgba(0,0,0,.7);color:#eee;font-family:system-ui,sans-serif;}
+  #soundPanel h3{margin:0 0 10px;text-align:center;color:#ffd76b;font-family:Georgia,serif;letter-spacing:3px;font-size:20px;}
+  #soundPanel .spRow{display:flex;align-items:center;gap:10px;margin:6px 0;}
+  #soundPanel .spLabel{flex:1;font-weight:800;font-size:15px;margin-top:6px;}
+  #soundPanel .spToggle{min-width:58px;padding:6px 10px;border-radius:999px;font-weight:800;background:#3a3550;color:#bbb;border:1px solid #555;}
+  #soundPanel .spToggle.on{background:linear-gradient(180deg,#ffe28a,#e0a93a);color:#1c1204;border-color:#fff2c4;}
+  #soundPanel input[type=range]{flex:1;accent-color:#ffd76b;height:28px;}
+  #soundPanel input[type=range]:disabled{opacity:.35;}
+  #soundPanel .spPct{width:42px;text-align:right;font-variant-numeric:tabular-nums;color:#ccc;font-size:13px;}
+  #soundPanel .spDone{display:block;width:100%;margin-top:14px;padding:10px;border-radius:999px;font-weight:800;font-size:15px;background:rgba(40,34,80,.9);color:#fff;border:1px solid rgba(150,130,255,.45);}
+  #mmSoundBtn{position:absolute;z-index:5;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));width:42px;height:42px;border-radius:50%;font-size:19px;padding:0;
+    background:rgba(16,15,34,.8);border:1px solid rgba(255,215,107,.5);color:#ffd76b;cursor:pointer;}
   #cardZoomInner{width:300px;height:420px;position:relative;}
   #cardZoomInner .card{font-size:15px;}
   #cardZoomInner .cardArt{height:80px;font-size:52px;}
@@ -1001,7 +1015,7 @@ body:not(.mobile) .vesselZone .card.ecard .ecStats{font-size:15px !important;pad
 <div id="status">
   <div class="turnInfo" id="turnInfo"></div>
   <div style="display:flex;gap:8px;">
-    <button class="small" id="sfxToggleBtn" onclick="toggleSfx()">🔊 Sound</button>
+    <button class="small" id="sfxToggleBtn" onclick="event.stopPropagation();openSoundPanel()">🔊 Sound</button>
     <button class="small" id="economyHelpBtn" onclick="restartTurnGuide()" title="Walk through a first turn step by step">❓ How to Play</button>
     <button class="small" onclick="location.reload()">Main Menu</button>
   </div>
@@ -1076,7 +1090,19 @@ body:not(.mobile) .vesselZone .card.ecard .ecStats{font-size:15px !important;pad
 
 <div id="stickyHud"></div>
 
+<div id="soundPanel" onclick="if(event.target===this) closeSoundPanel()">
+  <div class="spCard">
+    <h3>Sound</h3>
+    <div class="spRow"><span class="spLabel">🎵 Music</span><button id="spMusicToggle" class="spToggle" onclick="toggleMusic()">On</button></div>
+    <div class="spRow"><input id="spMusicVol" type="range" min="0" max="100" step="5" oninput="onMusicSlider(+this.value)"><span id="spMusicPct" class="spPct">50%</span></div>
+    <div class="spRow"><span class="spLabel">💥 Effects</span><button id="spSfxToggle" class="spToggle" onclick="toggleSfx()">On</button></div>
+    <div class="spRow"><input id="spSfxVol" type="range" min="0" max="100" step="5" oninput="onSfxSlider(+this.value)"><span id="spSfxPct" class="spPct">100%</span></div>
+    <button class="spDone" onclick="closeSoundPanel()">Done</button>
+  </div>
+</div>
+
 <div id="lobbyOverlay">
+  <button id="mmSoundBtn" onclick="event.stopPropagation();openSoundPanel()" aria-label="Sound settings">🔊</button>
   <div class="mmNebula"></div><div class="mmStars"></div><div class="mmStars mmStars2"></div>
   <div class="mmInner">
     <svg class="mmLogo" viewBox="0 0 512 512" aria-hidden="true">
@@ -1631,13 +1657,131 @@ const SFX_SOURCES = {
 // Persisted via localStorage so the mute choice survives a reload; falls back to enabled if storage
 // is unavailable (private browsing, etc.) or holds anything other than the literal string "off".
 const sfxEnabled = { value: (()=>{ try{ return localStorage.getItem('enscraSfxOff')!=='1'; }catch(e){ return true; } })() };
+function readVol(key, dflt){ try{ const v = parseFloat(localStorage.getItem(key)); return isNaN(v) ? dflt : Math.max(0, Math.min(1, v)); }catch(e){ return dflt; } }
+// Effects / music volume, 0..1, remembered per device. Effects scale the old fixed levels (so 100% = how it always sounded).
+const sfxVolume = { value: readVol('enscraSfxVol', 1) };
 function toggleSfx(){
   sfxEnabled.value = !sfxEnabled.value;
   try{ localStorage.setItem('enscraSfxOff', sfxEnabled.value ? '0' : '1'); }catch(e){}
-  const btn = document.getElementById('sfxToggleBtn');
-  if(btn) btn.textContent = sfxEnabled.value ? '🔊 Sound' : '🔇 Sound';
+  refreshSoundButtons();
   if(sfxEnabled.value) playSfx('draw'); // quick audible confirmation that sound is back on
 }
+function setSfxVolume(v){
+  sfxVolume.value = Math.max(0, Math.min(1, v));
+  try{ localStorage.setItem('enscraSfxVol', String(sfxVolume.value)); }catch(e){}
+  if(sfxAudio.gain) sfxAudio.gain.gain.value = 0.55 * sfxVolume.value;
+}
+
+// ---- Background music ----------------------------------------------------------------------------
+// Loopable tracks live as separate files in the music/ folder next to index.html (too big to embed).
+// Any file that's missing is just skipped, so tracks can be added one at a time. The main menu plays
+// menu.ogg; a game plays the faction tracks of the two decks in it, swapping on a crossfade every few loops.
+const MUSIC_DIR = 'music/';
+const MUSIC_MENU = ['menu'];
+const MUSIC_GAME_DEFAULT = ['red','green','blue','white']; // Emberroot (Red/Green) vs Tidewind (White/Blue)
+const music = {
+  enabled: (()=>{ try{ return localStorage.getItem('enscraMusicOff')!=='1'; }catch(e){ return true; } })(),
+  volume: readVol('enscraMusicVol', 0.5),
+  el: null, list: [], idx: 0, loops: 0, mode: null, started: false, missing: {}, fadeTimer: null,
+};
+const MUSIC_LOOPS_BEFORE_SWAP = 3;
+function musicTarget(){ return music.enabled ? music.volume * 0.6 : 0; } // 0.6 keeps 100% from drowning the effects
+function musicFade(el, to, ms, after){
+  if(!el) return;
+  clearInterval(el._fade);
+  const from = el.volume, t0 = performance.now();
+  el._fade = setInterval(()=>{
+    const k = Math.min(1, (performance.now()-t0)/ms);
+    try{ el.volume = Math.max(0, Math.min(1, from + (to-from)*k)); }catch(e){}
+    if(k>=1){ clearInterval(el._fade); if(after) after(); }
+  }, 40);
+}
+function musicPlayIndex(i, tries){
+  tries = tries||0;
+  if(!music.list.length || tries >= music.list.length) return; // nothing available (yet)
+  i = ((i % music.list.length) + music.list.length) % music.list.length;
+  const name = music.list[i];
+  if(music.missing[name]) return musicPlayIndex(i+1, tries+1);
+  const old = music.el;
+  const el = new Audio(MUSIC_DIR + name + '.ogg');
+  el.loop = true; el.preload = 'auto'; el.volume = 0; // the browser's own loop, so a clean loop stays gapless
+  el.addEventListener('error', ()=>{ music.missing[name] = true; if(music.el===el){ music.el = old; musicPlayIndex(i+1, tries+1); } });
+  // after a few times round, crossfade to the next available track (only if there's more than one)
+  let lastT = 0;
+  el.addEventListener('timeupdate', ()=>{
+    if(music.el!==el) return;
+    if(el.currentTime + 0.5 < lastT){ music.loops++;
+      if(music.list.filter(n=>!music.missing[n]).length>1 && music.loops>=MUSIC_LOOPS_BEFORE_SWAP) musicPlayIndex(music.idx+1);
+    }
+    lastT = el.currentTime;
+  });
+  music.el = el; music.idx = i; music.loops = 0;
+  const p = el.play();
+  if(p && p.then) p.then(()=>{ musicFade(el, musicTarget(), 1500); }).catch(()=>{ music.started = false; });
+  if(old){ musicFade(old, 0, 1500, ()=>{ try{ old.pause(); }catch(e){} }); }
+}
+// mode: 'menu' or 'game'. Browsers only allow audio after a tap, so this is also re-tried on the first tap.
+function setMusicMode(mode, list){
+  music.mode = mode;
+  music.list = (list || (mode==='menu' ? MUSIC_MENU.concat(MUSIC_GAME_DEFAULT) : MUSIC_GAME_DEFAULT)).slice();
+  if(mode==='game'){ music.list.sort(()=>Math.random()-.5); }
+  music.started = true;
+  musicPlayIndex(0);
+}
+function musicGameList(){
+  try{
+    const cols = new Set();
+    state.players.forEach(p=>[...(p.deck||[]),...(p.hand||[])].forEach(c=>{ if(c && c.colour) cols.add(String(c.colour).toLowerCase()); }));
+    const l = ['red','green','blue','white','purple'].filter(c=>cols.has(c));
+    return l.length ? l : MUSIC_GAME_DEFAULT;
+  }catch(e){ return MUSIC_GAME_DEFAULT; }
+}
+['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev, ()=>{
+  if(!music.started && music.enabled) setMusicMode(music.mode || 'menu');
+}, {capture:true, passive:true}));
+document.addEventListener('visibilitychange', ()=>{ // stop playing in your pocket when the app is backgrounded
+  if(!music.el) return;
+  if(document.hidden) music.el.pause();
+  else if(music.enabled){ const p = music.el.play(); if(p&&p.catch) p.catch(()=>{}); }
+});
+function toggleMusic(){
+  music.enabled = !music.enabled;
+  try{ localStorage.setItem('enscraMusicOff', music.enabled ? '0' : '1'); }catch(e){}
+  if(music.enabled){
+    if(!music.el){ setMusicMode(music.mode || 'menu'); }
+    else { const p = music.el.play(); if(p&&p.catch) p.catch(()=>{}); musicFade(music.el, musicTarget(), 600); }
+  } else if(music.el){ const el = music.el; musicFade(el, 0, 400, ()=>{ if(!music.enabled) el.pause(); }); }
+  refreshSoundButtons();
+}
+function setMusicVolume(v){
+  music.volume = Math.max(0, Math.min(1, v));
+  try{ localStorage.setItem('enscraMusicVol', String(music.volume)); }catch(e){}
+  if(music.el){ clearInterval(music.el._fade); try{ music.el.volume = musicTarget(); }catch(e){} }
+}
+
+// ---- Sound panel (opened from 🔊 Sound in the menu, or the 🔊 on the main menu) ----
+function refreshSoundButtons(){
+  const anyOn = sfxEnabled.value || music.enabled;
+  document.querySelectorAll('#sfxToggleBtn,#mmSoundBtn').forEach(b=>{ b.textContent = b.id==='mmSoundBtn' ? (anyOn?'🔊':'🔇') : (anyOn ? '🔊 Sound' : '🔇 Sound'); });
+  const mt = document.getElementById('spMusicToggle'), st = document.getElementById('spSfxToggle');
+  if(mt){ mt.textContent = music.enabled ? 'On' : 'Off'; mt.classList.toggle('on', music.enabled); }
+  if(st){ st.textContent = sfxEnabled.value ? 'On' : 'Off'; st.classList.toggle('on', sfxEnabled.value); }
+  const mv = document.getElementById('spMusicVol'), sv = document.getElementById('spSfxVol');
+  if(mv){ mv.value = Math.round(music.volume*100); mv.disabled = !music.enabled; document.getElementById('spMusicPct').textContent = mv.value+'%'; }
+  if(sv){ sv.value = Math.round(sfxVolume.value*100); sv.disabled = !sfxEnabled.value; document.getElementById('spSfxPct').textContent = sv.value+'%'; }
+}
+function openSoundPanel(){
+  document.body.classList.remove('drawerOpen');
+  const p = document.getElementById('soundPanel'); if(!p) return;
+  p.classList.add('open'); refreshSoundButtons();
+}
+function closeSoundPanel(){ const p = document.getElementById('soundPanel'); if(p) p.classList.remove('open'); }
+let sfxPreviewAt = 0;
+function onSfxSlider(v){
+  setSfxVolume(v/100); refreshSoundButtons();
+  const now = performance.now(); if(now - sfxPreviewAt > 250){ sfxPreviewAt = now; playSfx('draw'); } // hear the new level while dragging
+}
+function onMusicSlider(v){ setMusicVolume(v/100); refreshSoundButtons(); }
 
 // First-launch (and reopenable) Devotion/Essence teaching overlay. Persisted the same way as the
 // sound-mute choice (localStorage, falls back to "show it" if storage is unavailable) so it's shown
@@ -1817,7 +1961,7 @@ function unlockSfxAudio(){
       const AC = window.AudioContext || window.webkitAudioContext;
       if(!AC) return;
       sfxAudio.ctx = new AC();
-      sfxAudio.gain = sfxAudio.ctx.createGain(); sfxAudio.gain.gain.value = 0.55; sfxAudio.gain.connect(sfxAudio.ctx.destination);
+      sfxAudio.gain = sfxAudio.ctx.createGain(); sfxAudio.gain.gain.value = 0.55 * sfxVolume.value; sfxAudio.gain.connect(sfxAudio.ctx.destination);
     }
     const ctx = sfxAudio.ctx;
     if(ctx.state!=='running' && ctx.resume) ctx.resume();
@@ -1849,7 +1993,7 @@ function playSfx(name){
     }
     // Not unlocked yet (no tap so far) — fall back to the old way, which works on desktop
     const a = new Audio(src);
-    a.volume = 0.55;
+    a.volume = 0.55 * sfxVolume.value;
     const p = a.play();
     if(p && typeof p.catch==='function') p.catch(()=>{});
   }catch(e){ /* a sound failure must never break the game */ }
@@ -4082,6 +4226,7 @@ function genRoomCode(){
 function closeLobby(){
   const el = document.getElementById('lobbyOverlay');
   if(el) el.classList.add('hidden');
+  if(music.enabled) setMusicMode('game', musicGameList()); else music.mode = 'game';
   // The board behind the lobby was already painted once at page load (see the unconditional startTurn()
   // call at the bottom of this script), so there's no upcoming render() to pick this up automatically —
   // paint the tutorial's first tip immediately rather than waiting on the player's next action.
@@ -4284,7 +4429,7 @@ document.addEventListener('click', ()=>{
 });
 
 startTurn();
-(()=>{ const btn = document.getElementById('sfxToggleBtn'); if(btn) btn.textContent = sfxEnabled.value ? '🔊 Sound' : '🔇 Sound'; })();
+(()=>{ refreshSoundButtons(); })();
 </script>
 
 <div id="cardHoverPreview"></div>
@@ -4319,7 +4464,7 @@ startTurn();
     try{
       if(actx.state==='suspended') actx.resume();
       const src = actx.createBufferSource(); src.buffer = hoverBuf;
-      const g = actx.createGain(); g.gain.value = 0.4;
+      const g = actx.createGain(); g.gain.value = 0.4 * (typeof sfxVolume==='object' ? sfxVolume.value : 1);
       src.connect(g).connect(actx.destination); src.start();
     }catch(e){ /* a sound failure must never break the game */ }
   }
