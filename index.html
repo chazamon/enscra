@@ -934,6 +934,14 @@ body.mobile #cardZoomOverlay.hasPlay #mZoomActions{display:flex;flex-direction:c
 body.mobile .vesselZone .card.ecard .zoomBtn,body.mobile .voidZoneBig .card.ecard .zoomBtn{display:flex !important;align-items:center;justify-content:center;
   top:auto;bottom:4%;left:4%;width:16px;height:16px;padding:0;font-size:8px;border-radius:50%;background:rgba(6,5,16,.85);border:1px solid rgba(255,215,107,.6);}
 body.mobile .voidZoneBig .card.ecard .zoomBtn{display:none !important;}
+/* Cards in play: ATK / DEF as a big solid badge in the bottom-right (mirrors the 🔍 on the left) so it's
+   readable at a glance without opening the card. Buffed/debuffed numbers still turn yellow live. */
+.vesselZone .card.ecard .ecStats{left:auto;top:auto;right:2%;bottom:2.5%;transform:none;z-index:3;
+  font-family:system-ui,sans-serif;font-size:13px !important;font-weight:900;color:#fff;letter-spacing:.2px;
+  background:rgba(6,5,16,.92);border:1px solid rgba(255,215,107,.75);border-radius:9px;padding:2px 6px;
+  box-shadow:0 1px 4px rgba(0,0,0,.7);}
+.vesselZone .card.ecard .ecStats .statMod{color:#ffd23a;-webkit-text-stroke:0;text-shadow:0 0 6px rgba(255,200,40,.85);}
+body:not(.mobile) .vesselZone .card.ecard .ecStats{font-size:15px !important;padding:3px 8px;}
 @media (prefers-reduced-motion:reduce){
   .colBox.placeable,.colBox.targetable,#nextPhaseBtn,.boardHeader .pname .active-tag{animation:none !important;}
 }
