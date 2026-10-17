@@ -535,6 +535,7 @@
 .ecStats{position:absolute;left:83%;top:90.8%;transform:translate(-50%,-50%);font-weight:700;font-size:5.6cqw;line-height:1;white-space:nowrap;}
 .ecStats .statMod{color:#ffd23a;-webkit-text-stroke:.35cqw #1a1004;paint-order:stroke fill;text-shadow:0 0 1.6cqw rgba(255,200,40,.75);}
 .card.ecard .tag{top:12.5%;right:14.5%;left:auto;font-family:system-ui,sans-serif;}
+.card.ecard .tag.shieldTag{right:auto;left:14.5%;background:#14502cdd;border:1px solid #7ee787;color:#d9ffe0;font-weight:800;}
 .card.ecard .zoomBtn{top:12.5%;left:14%;font-family:system-ui,sans-serif;}
 .card.ecard.selected{outline:none;filter:drop-shadow(0 0 3px #fff) drop-shadow(0 0 7px #fff);}
 #graveyardGrid .voidRowEligible .card.ecard{outline:none;filter:drop-shadow(0 0 3px #ffd76b) drop-shadow(0 0 7px #ffd76b);}
@@ -693,6 +694,7 @@ body.mobile .voidCountBadge{font-size:8px;padding:0 3px;}
 body.mobile .cardBackMini{width:8px !important;height:11px !important;}
 body.mobile .card .zoomBtn{display:none;}
 body.mobile .card.ecard .tag{font-size:6.5px;padding:0 3px;top:11%;right:12%;}
+body.mobile .card.ecard .tag.shieldTag{right:auto;left:12%;}
 body.mobile #board-1 > div[style*="text-align:center"]{margin-top:3px !important;}
 body.mobile #board-1 > div[style*="text-align:center"] button{font-size:11px;padding:5px 10px;}
 
@@ -762,7 +764,7 @@ body.mobile #log{display:none;position:fixed;left:8px;right:8px;bottom:calc(8px 
   box-shadow:0 -6px 30px rgba(0,0,0,.7);border-color:#c4a87088;}
 body.mobile.showLog #log{display:block;}
 body.mobile #deflectPrompt,body.mobile #riteOfferPrompt,body.mobile #phaseWarningPrompt{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:110;margin:0;font-size:12.5px;box-shadow:0 -6px 30px rgba(0,0,0,.75);}
-body.mobile #riteOfferPrompt.roPicking{bottom:auto;top:calc(48px + env(safe-area-inset-top,0px));box-shadow:0 6px 30px rgba(0,0,0,.75);}
+body.mobile #riteOfferPrompt.roPicking,body.mobile #deflectPrompt.roPicking{bottom:auto;top:calc(48px + env(safe-area-inset-top,0px));box-shadow:0 6px 30px rgba(0,0,0,.75);}
 body.mobile #deflectPrompt button,body.mobile #riteOfferPrompt button,body.mobile #phaseWarningPrompt button{padding:9px 12px;}
 body.mobile #turnGuideTip{width:min(300px,calc(100vw - 16px));}
 
@@ -1258,10 +1260,10 @@ const CARD_MECHANICS = {
   // machinery (startOnPlayEffect / resolvePendingEffectZoneClick).
   "Searing Strike": { riteEffect: { debuffTargetVessel: { atk:2, def:0 } } },
   "Molten Burst":   { riteEffect: { damageAnyVessel: 2 } },
-  // "Prevent the next 3 damage" has no damage-accumulation model to hook into here (combat is an
-  // instant ATK-vs-DEF comparison, not a running damage total) — simplified to the defensive-equivalent
-  // +0/+3 until end of turn, same mechanism as every other temporary buff/debuff in this build.
-  "Bulwark":        { riteEffect: { debuffTargetVessel: { atk:0, def:3 } } },
+  // "Prevent the next 3 damage to target Vessel this turn" — a damage shield (v.shield), soaked up
+  // before damage is compared to DEF in combat (executeAttack) and by effects (damageVessel), and
+  // cleared at the start of the next turn with the other "this turn" effects.
+  "Bulwark":        { riteEffect: { shieldTargetVessel: 3 } },
   "Second Wind":    { riteEffect: { returnGrade1FromVoid: true } },
   "Overgrowth":     { riteEffect: { permBuffTargetVessel: { atk:0, def:3 } } },
   "Crosswind":      { riteEffect: { debuffTargetVessel: { atk:-2, def:0 } } },
@@ -1327,12 +1329,21 @@ function isProtectedFromEnemyRite(zonePlayerIdx, colIdx, casterIdx){
 // system — combat resolves instantly by comparing ATK to DEF — so a ping like this destroys the
 // target only if the damage meets or exceeds its current effective DEF; anything it doesn't kill has
 // no lasting mark, same as the rest of the game's combat model.
+// Bulwark's "prevent the next N damage": takes up to v.shield off incoming damage, uses that much of the
+// shield up, and returns how much it prevented.
+function soakShield(v, amount, sourceName){
+  const sh = Math.min(v.shield||0, Math.max(0, amount));
+  if(sh>0){ v.shield -= sh; log(`${v.name}'s shield prevents ${sh} damage${sourceName?` from ${sourceName}`:''}.`); }
+  return sh;
+}
 function damageVessel(playerIdx, colIdx, amount, sourceName){
   const p = state.players[playerIdx];
   const v = p.front[colIdx];
   if(!v) return;
   const eff = getEffectiveStats(playerIdx, colIdx);
-  if(amount >= eff.def){
+  const soaked = soakShield(v, amount, sourceName);
+  amount -= soaked;
+  if(amount > 0 && amount >= eff.def){
     const fromRect = captureCardRect(v.id); // the caller (resolvePendingEffectZoneClick) calls render() right after this returns, synchronously — by the time this rAF fires, the new top-of-Void cardEl already exists
     p.front[colIdx] = null;
     p.void.push(v);
@@ -1371,6 +1382,8 @@ function startOnPlayEffect(onPlay, playerIdx, colIdx, sourceName, fromRite){
     state.pendingEffect = { kind:'bounceTargetEnemyVessel', sourceName, playerIdx, fromRite };
   } else if(onPlay.bounceAnyVessel){
     state.pendingEffect = { kind:'bounceAnyVessel', sourceName, playerIdx, fromRite };
+  } else if(onPlay.shieldTargetVessel){
+    state.pendingEffect = { kind:'shieldTargetVessel', amount:onPlay.shieldTargetVessel, sourceName, playerIdx, fromRite };
   } else if(onPlay.permBuffTargetVessel){
     state.pendingEffect = { kind:'permBuffTargetVessel', atk:onPlay.permBuffTargetVessel.atk||0, def:onPlay.permBuffTargetVessel.def||0, sourceName, playerIdx, fromRite };
   } else if(onPlay.reattuneColumn){
@@ -1415,6 +1428,12 @@ function resolvePendingEffectZoneClick(playerIdx, colIdx){
     v.tempAtkMod = (v.tempAtkMod||0) + pe.atk;
     v.tempDefMod = (v.tempDefMod||0) + pe.def;
     log(`${pe.sourceName}: ${v.name} gets ${pe.atk>=0?'+':''}${pe.atk}/${pe.def>=0?'+':''}${pe.def} until end of turn.`);
+    state.pendingEffect = null; render(); return;
+  }
+  if(pe.kind==='shieldTargetVessel'){
+    if(!v || riteBlocked) return;
+    v.shield = (v.shield||0) + pe.amount;
+    log(`${pe.sourceName}: the next ${pe.amount} damage to ${v.name} this turn is prevented.`);
     state.pendingEffect = null; render(); return;
   }
   if(pe.kind==='permBuffTargetVessel'){
@@ -1626,7 +1645,7 @@ function skipPendingEffect(){
 // clearing them at the top of every startTurn(), for either player, guarantees that regardless of
 // whose turn it currently is.
 function clearEndOfTurnEffects(){
-  state.players.forEach(p=>{ p.front.forEach(v=>{ if(v){ v.tempAtkMod=0; v.tempDefMod=0; } }); });
+  state.players.forEach(p=>{ p.front.forEach(v=>{ if(v){ v.tempAtkMod=0; v.tempDefMod=0; v.shield=0; } }); });
 }
 
 let globalUid = 0;
@@ -2379,6 +2398,12 @@ function canPlayCard(playerIdx, card){
   // render()'s scheduleAi() queues another identical attempt 650ms later -> repeat). This carve-out
   // keeps every human-blocking case intact (isMyActionableTurn() already covers them) while letting
   // the AI's own evaluation of its own turn see the real, correct answer.
+  // Defending: only the defender's affordable Instant Rites (never Deflect, which has its own button).
+  if(defenseCasting()){
+    const d = opp(state.current);
+    return playerIdx===d && !state.pendingEffect && card.type==='Rite' && card.speed==='Instant'
+      && card.name!=='Deflect' && state.players[d].essence>=card.cost;
+  }
   const aiActingForItself = aiOpponentActive() && state.current===ai.seat;
   if(playerIdx!==state.current || (!aiActingForItself && !isMyActionableTurn()) || state.pendingEffect || state.pendingAttack) return false;
   // While an attack is staged awaiting the Rite-offer decision, only Instant Rites remain playable —
@@ -2423,27 +2448,28 @@ function logWhyCardCantPlay(p, card){
   }
   if(p.essence < card.cost) log(`${card.name}: not enough Attune (needs ${card.cost}, you have ${p.essence}).`);
   else if(card.type==='Rite' && card.speed!=='Instant') log(`${card.name} is Main-speed — only playable during Main Phase 1 or 2.`);
-  else if(card.type==='Rite') log(`${card.name} can only be played during your own Main or Battle Phase.`);
+  else if(card.type==='Rite') log(`${card.name} can only be played during your own Main or Battle Phase, or when you're attacked.`);
   else if(card.type==='Realm') log(`${card.name}: Realms are Main-speed — only playable during Main Phase 1 or 2.`);
   else log(`${card.name} can't be played right now.`);
 }
 
 function castSpellCard(cardId){
-  const p = cur();
+  const seat = castSeat();
+  const p = state.players[seat];
   const card = p.hand.find(c=>c.id===cardId);
   if(!card) return;
   if(card.name==='Deflect'){
     log(`Deflect can only be played in reaction to an incoming attack — it's offered automatically when you're attacked.`);
     render(); return;
   }
-  if(!canPlayCard(state.current, card)){
+  if(!canPlayCard(seat, card)){
     logWhyCardCantPlay(p, card);
     render(); return;
   }
   const iAmActing = net.isOnline && net.connected && net.mySeat===state.current;
   const fromRect = captureCardRect(card.id); // hand position, before render() moves it to the Void/Realm Zone
   p.essence -= card.cost;
-  flashEssenceSpend(state.current);
+  flashEssenceSpend(seat);
   p.hand = p.hand.filter(c=>c.id!==card.id);
   state.selectedCardId = null;
   playSfx('play'); // Rite cast or Realm played
@@ -2455,7 +2481,7 @@ function castSpellCard(cardId){
     const m = mech(card.name);
     // Online multiplayer note, same caveat as Vessel on-play effects: this resolves locally on the
     // acting player's device only — interactive targeting isn't mirrored to the opponent's device.
-    if(m.riteEffect) startOnPlayEffect(m.riteEffect, state.current, null, card.name, true);
+    if(m.riteEffect) startOnPlayEffect(m.riteEffect, seat, null, card.name, true);
     else render();
   }
   // Realms don't render as a cardEl in the Realm Zone (text only — see renderRealmZone), so this is a
@@ -2485,7 +2511,7 @@ function playRealm(card){
 function riteEffectWantsBoardZone(m){
   if(!m || !m.riteEffect) return false;
   const re = m.riteEffect;
-  return !!(re.damageAnyVessel || re.debuffTargetVessel || re.permBuffTargetVessel || re.stunTargetVessel || re.bounceTargetEnemyVessel || re.bounceAnyVessel);
+  return !!(re.damageAnyVessel || re.debuffTargetVessel || re.permBuffTargetVessel || re.shieldTargetVessel || re.stunTargetVessel || re.bounceTargetEnemyVessel || re.bounceAnyVessel);
 }
 
 // Is the clicked zone a LEGAL target for this Rite's effect? Checked before any cost is paid, so a
@@ -2504,17 +2530,18 @@ function riteZoneTargetValid(re, zonePlayerIdx, colIdx, casterIdx){
 // then pay the cost/move the card/resolve the effect atomically, so an illegal click never spends the
 // card and a legal click never leaves an orphaned pendingEffect waiting on a target we already know.
 function castRiteAtZone(cardId, zonePlayerIdx, colIdx){
-  const p = cur();
+  const seat = castSeat();
+  const p = state.players[seat];
   const card = p.hand.find(c=>c.id===cardId);
   if(!card || card.type!=='Rite') return false;
-  if(!canPlayCard(state.current, card)){
+  if(!canPlayCard(seat, card)){
     logWhyCardCantPlay(p, card); // e.g. "not enough essence" — see logWhyCardCantPlay's comment for why this matters here specifically
     render();
     return false;
   }
   const m = mech(card.name);
   if(!riteEffectWantsBoardZone(m)) return false;
-  if(!riteZoneTargetValid(m.riteEffect, zonePlayerIdx, colIdx, state.current)) return false;
+  if(!riteZoneTargetValid(m.riteEffect, zonePlayerIdx, colIdx, seat)) return false;
   castSpellCard(cardId); // pays cost, moves the Rite to the Void, sets state.pendingEffect via startOnPlayEffect
   resolvePendingEffectZoneClick(zonePlayerIdx, colIdx); // resolve immediately against the already-validated target
   return true;
@@ -2531,6 +2558,17 @@ function castRiteAtZone(cardId, zonePlayerIdx, colIdx){
 // This mirrors Vessels' own select-then-target-click pattern instead of casting on the very first
 // click, which previously spent a card the instant you clicked it just to look at it.
 function selectCard(cardId){
+  if(defenseCasting()){
+    // Defending: pick one of your Instant Rites (no-target ones like Foresight cast on a second tap).
+    if(state.pendingEffect && state.pendingEffect.kind==='discardFromEffect'){ resolvePendingDiscard(cardId); return; }
+    if(state.pendingEffect) return;
+    const card = state.players[castSeat()].hand.find(c=>c.id===cardId);
+    if(!card || card.type!=='Rite') return;
+    if(state.selectedCardId===cardId && !riteEffectWantsBoardZone(mech(card.name))){ castSpellCard(cardId); return; }
+    state.selectedCardId = (state.selectedCardId===cardId) ? null : cardId;
+    render();
+    return;
+  }
   if(!isMyActionableTurn()) return;
   if(state.pendingPhaseWarning) return;
   if(state.pendingEffect && state.pendingEffect.kind==='discardFromEffect'){
@@ -2697,6 +2735,45 @@ function selectAttacker(colIdx){
   render();
 }
 
+// --- Defending with an Instant -----------------------------------------------------------------------
+// When the AI attacks you (vs AI / tutorial), the attack pauses so you can cast Instant Rites from your
+// hand (using Attune left over from your own turn) before it resolves. It rides on the same staged
+// state.pendingAttack the Deflect prompt uses: pa.casting = true once you choose to cast. Hotseat and
+// online don't get this window — hotseat's hand panel shows the attacker's hand, and online can't
+// sync an off-turn cast yet (the same limits Deflect already has).
+function humanCanReact(defenderIdx){ return !net.isOnline && aiOpponentActive() && defenderIdx!==ai.seat; }
+function reactiveRites(defenderIdx){
+  const d = state.players[defenderIdx];
+  return d.hand.filter(c=>c.type==='Rite' && c.speed==='Instant' && c.name!=='Deflect' && d.essence>=c.cost);
+}
+function defenseCasting(){ return !!(state.pendingAttack && state.pendingAttack.casting); }
+// Whose card is being cast right now: the defender while they're reacting, otherwise the active player.
+function castSeat(){ return defenseCasting() ? opp(state.current) : state.current; }
+function startDefenseCasting(){
+  if(!state.pendingAttack) return;
+  state.pendingAttack.casting = true;
+  state.selectedCardId = null;
+  render();
+}
+// Resolve the staged attack (after Deflect was declined, or the defender finished casting). If a Rite
+// removed the attacker or its target, the attack just fizzles.
+function resolveStagedAttack(){
+  const pa = state.pendingAttack;
+  if(!pa) return;
+  state.pendingAttack = null;
+  state.selectedCardId = null;
+  state.selectedAttackerZone = String(pa.attackerColIdx);
+  const attackerGone = !cur().front[pa.attackerColIdx];
+  const targetGone = !pa.directPlayer && !curOpp().front[pa.targetColIdx];
+  if(attackerGone || targetGone){
+    log(attackerGone ? `The attacking Vessel is gone — the attack fizzles.` : `The target is gone — the attack fizzles.`);
+    state.selectedAttackerZone = null;
+    render();
+    return;
+  }
+  executeAttack(pa.targetColIdx, pa.directPlayer);
+}
+
 // ignoreGrade1: Wildfire Avatar's "cannot be blocked by Level 1 Vessels" — when true, Level-1 Vessels
 // don't count as a reason the opponent is protected from a direct attack.
 function frontRowHasVessels(playerIdx, ignoreGrade1){
@@ -2736,8 +2813,10 @@ function proceedWithAttack(targetColIdx, directPlayer){
   const defender = state.players[defenderIdx];
   const deflectCard = (!directPlayer && !net.isOnline) ? defender.hand.find(c=>c.name==='Deflect') : null;
   const hasOtherTarget = !directPlayer && defender.front.some((v,i)=> v && i!==targetColIdx);
-  if(deflectCard && defender.essence>=deflectCard.cost && hasOtherTarget){
-    state.pendingAttack = { targetColIdx, directPlayer, attackerColIdx: Number(state.selectedAttackerZone) };
+  const canDeflect = deflectCard && defender.essence>=deflectCard.cost && hasOtherTarget;
+  const canReact = humanCanReact(defenderIdx) && reactiveRites(defenderIdx).length>0;
+  if(canDeflect || canReact){
+    state.pendingAttack = { targetColIdx, directPlayer, attackerColIdx: Number(state.selectedAttackerZone), casting:false };
     render();
     return;
   }
@@ -2780,12 +2859,7 @@ function finishRiteOfferAndAttack(){
   proceedWithAttack(ro.targetColIdx, ro.directPlayer);
 }
 
-function declineDeflect(){
-  const pa = state.pendingAttack;
-  if(!pa) return;
-  state.pendingAttack = null;
-  executeAttack(pa.targetColIdx, pa.directPlayer);
-}
+function declineDeflect(){ resolveStagedAttack(); }
 
 function offerDeflect(cardId){
   const pa = state.pendingAttack;
@@ -2849,8 +2923,11 @@ function executeAttack(targetColIdx, directPlayer){
     // Vessels are still in their columns for getEffectiveStats() to see.
     const attackerEff = getEffectiveStats(state.current, aCol);
     const defenderEff = getEffectiveStats(opp(state.current), targetColIdx);
-    const defenderDies = attackerEff.atk >= defenderEff.def;
-    const attackerDies = defenderEff.atk >= attackerEff.def;
+    // Bulwark shields soak damage before it's compared to DEF (both sides deal damage at the same time).
+    const toDefender = attackerEff.atk - soakShield(defender, attackerEff.atk, attacker.name);
+    const toAttacker = defenderEff.atk - soakShield(attacker, defenderEff.atk, defender.name);
+    const defenderDies = toDefender > 0 && toDefender >= defenderEff.def;
+    const attackerDies = toAttacker > 0 && toAttacker >= attackerEff.def;
     if(defenderDies){ defenderFromRect = captureCardRect(defender.id); defenderDiedId = defender.id; o.front[targetColIdx] = null; o.void.push(defender); playSfx('discard'); }
     if(attackerDies){ attackerFromRect = captureCardRect(attacker.id); attackerDiedId = attacker.id; p.front[aCol] = null; p.void.push(attacker); playSfx('discard'); }
 
@@ -2869,7 +2946,7 @@ function executeAttack(targetColIdx, directPlayer){
     // survives, and doesn't change whether either Vessel lives or dies, which is still decided by the
     // normal ATK-vs-DEF math above.
     if(defenderDies && mech(attacker.name).trampleToPlayer){
-      const excess = attackerEff.atk - defenderEff.def;
+      const excess = toDefender - defenderEff.def;
       if(excess>0){
         o.hp = Math.max(0, o.hp - excess);
         log(`${attacker.name}'s Breakthrough damage carries through for ${excess} more to ${o.name}! (${o.name} HP: ${o.hp})`);
@@ -2932,6 +3009,12 @@ function checkWin(){
 
 function zoneClick(playerIdx, colIdx){
   if(state.gameOver) return;
+  if(defenseCasting()){
+    if(state.pendingEffect){ resolvePendingEffectZoneClick(playerIdx, colIdx); return; }
+    const selCard = state.players[castSeat()].hand.find(c=>c.id===state.selectedCardId);
+    if(selCard && selCard.type==='Rite' && riteEffectWantsBoardZone(mech(selCard.name))) castRiteAtZone(selCard.id, playerIdx, colIdx);
+    return;
+  }
   if(!isMyActionableTurn()) return;
   if(state.pendingPhaseWarning) return;
   // While an attack is staged awaiting a Deflect decision, zone clicks are inert except the one that
@@ -3120,11 +3203,10 @@ function registerCard(c){ if(c && c.id!==undefined) cardRegistry[c.id] = c; }
 const ELEMENT_NAME = {Red:"Fire",Green:"Earth",Blue:"Water",White:"Wind",Purple:"Shadow"};
 // What's PRINTED on the card face. Most cards just print their game effect text; these few differ:
 // vanilla Vessels had designer notes in their effect field ("Early wall" etc.) that were never meant
-// to appear on the card, Bulwark prints what this engine actually does with it, and Realms get the
+// to appear on the card, and Realms get the
 // bullet-point layout used on the printed cards.
 const CARD_FACE_TEXT = {
   "Ember Acolyte":"", "Rootling Guard":"", "Tide Skirmisher":"", "Gale Herald":"", "Wavebreak Sentinel":"",
-  "Bulwark":"Target Vessel gains +0/+3 until end of turn.",
 };
 const CARD_FLAVOUR = {
   "Bastion Warden":"A statue, lost to time. Its silence has fooled many men. They are silent now too.",
@@ -3170,6 +3252,7 @@ function renderCard(v, extraClass='', statsOverride=null, domId=null){
     cost = v.grade;
     tag = v.stunned ? `<span class="tag">${wrapKw('STUNNED','stunned')}</span>`
       : (v.sick ? `<span class="tag">${wrapKw('SICK','sick')}</span>` : (v.attacked ? `<span class="tag">${wrapKw('SPENT','spent')}</span>` : ''));
+    if(v.shield>0) tag += `<span class="tag shieldTag" title="Prevents the next ${v.shield} damage this turn">🛡 ${v.shield}</span>`;
     const atk = statsOverride ? statsOverride.atk : v.atk;
     const def = statsOverride ? statsOverride.def : v.def;
     // A stat that differs from the printed value (buffed OR debuffed) is shown in yellow.
@@ -3365,7 +3448,7 @@ function animateAttackLunge(cardId, targetEl){
 // null if this zone isn't a valid target for the current pending effect.
 function pendingEffectZoneOverlay(pe, zonePlayerIdx, colIdx, v){
   const riteBlocked = pe.fromRite && isProtectedFromEnemyRite(zonePlayerIdx, colIdx, pe.playerIdx);
-  if(pe.kind==='damageAnyVessel' || pe.kind==='debuffTargetVessel' || pe.kind==='stunTargetVessel' || pe.kind==='permBuffTargetVessel'){
+  if(pe.kind==='damageAnyVessel' || pe.kind==='debuffTargetVessel' || pe.kind==='stunTargetVessel' || pe.kind==='permBuffTargetVessel' || pe.kind==='shieldTargetVessel'){
     if(!v || riteBlocked) return null;
     return { cls:'targetable', overlay:'<div class="zoneOverlay">▸ TARGET</div>' };
   }
@@ -3433,7 +3516,8 @@ function renderBoard(playerIdx, mirrored, domId){
   // Each column is ONE merged box: the Vessel zone on top (placement/combat), a thin Devotion strip
   // on the bottom (attunement info, read-only) — one continuous zone per column instead of two
   // separately-framed rows. Void + Deck share the 6th column the same way (big/strip split).
-  const selectedCard = state.selectedCardId!==null ? p.hand.find(c=>c.id===state.selectedCardId) : null;
+  const actorSeat = castSeat();
+  const selectedCard = state.selectedCardId!==null ? state.players[actorSeat].hand.find(c=>c.id===state.selectedCardId) : null;
   let rowHtml = `<div class="row">`;
   for(let i=0;i<5;i++){
     const v = p.front[i];
@@ -3456,8 +3540,8 @@ function renderBoard(playerIdx, mirrored, domId){
     // cast first in that case too (see its comment), so this flag is computed once and used below to
     // make sure the Battle-phase "▸ SELECT"/"▸ ATTACK" overlays don't paint over it on the same zone.
     const riteTargetingNow = (isMainPhase(phase) || phase==='Battle') && selectedCard && selectedCard.type==='Rite'
-      && canPlayCard(state.current, selectedCard) && riteEffectWantsBoardZone(mech(selectedCard.name))
-      && riteZoneTargetValid(mech(selectedCard.name).riteEffect, playerIdx, i, state.current);
+      && canPlayCard(actorSeat, selectedCard) && riteEffectWantsBoardZone(mech(selectedCard.name))
+      && riteZoneTargetValid(mech(selectedCard.name).riteEffect, playerIdx, i, actorSeat);
     if(riteTargetingNow){
       boxCls+=' targetable'; overlay='<div class="zoneOverlay">▸ TARGET</div>';
     }
@@ -3465,16 +3549,16 @@ function renderBoard(playerIdx, mirrored, domId){
     if(isMainPhase(phase) && isCurrent && state.reattuneStaging && state.selectedCardId===state.reattuneStaging.cardId && col.colour){
       boxCls+=' targetable'; overlay='<div class="zoneOverlay">▸ REATTUNE</div>';
     }
-    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && isCurrent && v && !v.sick && !v.attacked && !v.stunned){ boxCls+=' placeable'; overlay='<div class="zoneOverlay battleTap">TAP<br>CARD</div>'; }
-    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && isCurrent && state.selectedAttackerZone===String(i)) boxCls+=' targetable';
-    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && !isCurrent && state.selectedAttackerZone){
+    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && !state.pendingAttack && isCurrent && v && !v.sick && !v.attacked && !v.stunned){ boxCls+=' placeable'; overlay='<div class="zoneOverlay battleTap">TAP<br>CARD</div>'; }
+    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && !state.pendingAttack && isCurrent && state.selectedAttackerZone===String(i)) boxCls+=' targetable';
+    if(phase==='Battle' && !riteTargetingNow && !state.pendingRiteOffer && !state.pendingAttack && !isCurrent && state.selectedAttackerZone){
       const attacker = state.players[state.current].front[Number(state.selectedAttackerZone)];
       const ignoreG1 = attacker && mech(attacker.name).cannotBeBlockedByGrade1;
       if(v && !(ignoreG1 && v.grade===1)){ boxCls+=' targetable'; overlay='<div class="zoneOverlay battleTap">TAP TO<br>ATTACK</div>'; }
     }
     // redirectAttack (Deflect) is the one pendingEffect whose actor is the DEFENDER, not state.current —
     // everything else is cast on your own turn so pe.playerIdx===state.current always holds for those.
-    if(state.pendingEffect && (state.pendingEffect.playerIdx===state.current || state.pendingEffect.kind==='redirectAttack')){
+    if(state.pendingEffect && (state.pendingEffect.playerIdx===state.current || state.pendingEffect.kind==='redirectAttack' || defenseCasting())){
       const peOverlay = pendingEffectZoneOverlay(state.pendingEffect, playerIdx, i, v);
       if(peOverlay){ boxCls+=' '+peOverlay.cls; overlay=peOverlay.overlay; }
     }
@@ -3554,7 +3638,8 @@ function renderHand(){
   // Broadened from "Main phase only" so Instant-speed Rites are still clickable during your own Battle
   // Phase — see canPlayCard() for the actual per-card legality (phase + essence + speed) that decides
   // whether a click does anything.
-  const generalClickWindow = isMyActionableTurn() && !state.pendingEffect && !state.pendingAttack && (isMainPhase(phase) || phase==='Battle');
+  const generalClickWindow = (isMyActionableTurn() && !state.pendingEffect && !state.pendingAttack && (isMainPhase(phase) || phase==='Battle'))
+    || (defenseCasting() && seat===castSeat() && !state.pendingEffect);
   document.getElementById('handTitle').textContent = `${p.name}'s Hand — ${p.hand.length}/6${phase==='End'&&p.hand.length>6&&isMyActionableTurn()?' (OVER CAP — click a card to discard)':(pendingDiscard?' (click a card to discard for the pending effect)':'')}`;
 
   // Big deck display next to the hand — a large, clearly-visible card BACK (sleeve design), not
@@ -3679,6 +3764,7 @@ function pendingEffectInstruction(pe){
   if(pe.kind==='stunTargetVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click any Vessel on either board to stun it (it can't attack next turn).`;
   if(pe.kind==='bounceTargetEnemyVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click an <b>enemy</b> Vessel to return it to their hand.`;
   if(pe.kind==='bounceAnyVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click any Vessel on either board to return it to its owner's hand.`;
+  if(pe.kind==='shieldTargetVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click a Vessel to prevent the next ${pe.amount} damage to it this turn.`;
   if(pe.kind==='permBuffTargetVessel') return `<span class="step">Effect Pending</span> — ${sourceName}: click any Vessel on either board to apply ${pe.atk>=0?'+':''}${pe.atk}/${pe.def>=0?'+':''}${pe.def} <b>permanently</b>.`;
   if(pe.kind==='returnFromVoid') return `<span class="step">Effect Pending</span> — ${sourceName}: click a <b style="color:#ffd76b">highlighted</b> Level 1 Vessel in your Void (open it below the board) to return it to hand.`;
   if(pe.kind==='reattuneColumn'){
@@ -3706,7 +3792,9 @@ function updateBigInstruction(){
   } else if(state.pendingEffect){
     msg = pendingEffectInstruction(state.pendingEffect);
   } else if(state.pendingAttack){
-    msg = `<span class="step">Attack Declared</span> — respond to the Deflect prompt above (play it, or resolve the attack as-is).`;
+    msg = defenseCasting()
+      ? `<span class="step">Defending</span> — tap an Instant Rite in your hand, then its target. Tap <b>Done</b> when finished.`
+      : `<span class="step">Attack Declared</span> — choose how to respond in the prompt above.`;
   } else if(net.isOnline && net.connected && state.current!==net.mySeat){
     msg = `<span class="step">${PHASE_LABELS[phase]}</span> — Waiting for <b>${p.name}</b> to act…`;
   } else if(phase==='Devotion'){
@@ -3781,6 +3869,7 @@ function renderDeflectPrompt(){
   const el = document.getElementById('deflectPrompt');
   if(!el) return;
   const pa = state.pendingAttack;
+  el.classList.toggle('roPicking', !!(pa && pa.casting)); // casting: phones move this box up so the hand stays tappable
   if(!pa || (state.pendingEffect && state.pendingEffect.kind==='redirectAttack')){ el.style.display='none'; return; }
   const defenderIdx = opp(state.current);
   const defender = state.players[defenderIdx];
@@ -3791,12 +3880,23 @@ function renderDeflectPrompt(){
     el.innerHTML = `<span><b>${defender.name}</b> is being attacked! The AI is deciding how to respond…</span>`;
     return;
   }
+  const attacker = cur().front[pa.attackerColIdx];
+  const target = pa.directPlayer ? null : defender.front[pa.targetColIdx];
+  const what = `<b>${attacker?attacker.name:'A Vessel'}</b> is attacking ${target?`your <b>${target.name}</b>`:'you directly'}!`;
+  if(pa.casting){
+    el.innerHTML = `<span>${what} Tap an Instant Rite in your hand, then its target.</span>
+      <button onclick="declineDeflect()">Done — Resolve Attack</button>`;
+    return;
+  }
   const deflectCard = defender.hand.find(c=>c.name==='Deflect');
-  el.innerHTML = `<span><b>${defender.name}</b> is being attacked!</span>
-    ${deflectCard && defender.essence>=deflectCard.cost
-      ? `<button onclick="offerDeflect(${deflectCard.id})">Play Deflect (${deflectCard.cost} essence) — redirect to a different Vessel</button>`
+  const hasOtherTarget = !pa.directPlayer && defender.front.some((v,i)=> v && i!==pa.targetColIdx);
+  const canReact = humanCanReact(defenderIdx) && reactiveRites(defenderIdx).length>0;
+  el.innerHTML = `<span>${what}</span>
+    ${deflectCard && defender.essence>=deflectCard.cost && hasOtherTarget
+      ? `<button onclick="offerDeflect(${deflectCard.id})">Play Deflect (${deflectCard.cost} Attune) — redirect to a different Vessel</button>`
       : ''}
-    <button onclick="declineDeflect()">Resolve Attack As-Is</button>`;
+    ${canReact ? `<button onclick="startDefenseCasting()">Cast an Instant Rite</button>` : ''}
+    <button onclick="declineDeflect()">${canReact?'No — Take the Attack':'Resolve Attack As-Is'}</button>`;
 }
 
 function renderRiteOfferPrompt(){
@@ -3869,7 +3969,7 @@ function render(){
     btn.textContent = `Resolve the Rite offer…`;
     btn.disabled = true;
   } else if(state.pendingAttack){
-    btn.textContent = `Waiting on Deflect response…`;
+    btn.textContent = `Respond to the attack…`;
     btn.disabled = true;
   } else if(state.pendingEffect){
     btn.textContent = `Resolve pending effect…`;
@@ -4099,7 +4199,7 @@ function aiFindPlacementColumn(card){
 // entirely here — both need extra staging (a Void click / a colour-then-column pick) beyond a single
 // board-zone click, which is out of scope for this heuristic bot.
 function aiRiteEffectIsBuff(re){
-  if(re.permBuffTargetVessel) return true;
+  if(re.permBuffTargetVessel || re.shieldTargetVessel) return true;
   if(re.debuffTargetVessel){
     const mod = re.debuffTargetVessel;
     return (mod.atk||0)>=0 && (mod.def||0)>=0;
@@ -4849,8 +4949,9 @@ body.mobile .zoneOverlay.battleTap,.zoneOverlay.battleTap{top:0;bottom:auto;left
 // One fixed game for every new player: stacked decks (same hand, same draws), a scripted opponent,
 // and a list of steps. Each step shows a tip pointed at the thing to tap, and only the action that
 // step asks for is allowed (anything else just shakes the tip) — so everyone plays exactly the same
-// game and sees every core rule once. Opponent starts on 7 HP so it's over in 4 of your turns.
-const TUT = { active:false, step:0, depth:0, aiTurn:-1, aiA:0, aiP:0, hlEl:null, won:false };
+// game and sees every core rule once (including defending on the opponent's turn). Opponent starts
+// on 7 HP so it's over in 4 of your turns.
+const TUT = { active:false, step:0, depth:0, aiTurn:-1, aiA:0, aiP:0, aiK:0, hlEl:null, won:false };
 const T$ = id => document.getElementById(id);
 const tMe = () => state.players[0], tAi = () => state.players[1];
 const tPh = () => PHASES[state.phaseIdx];
@@ -4891,6 +4992,10 @@ function tRiteStep(text, name, col){
 const tNextStep = (text, done) => ({ text, anchor:()=> tPh()==='Devotion' ? tDoneBtn() : tNext(), allow:{ next:1 }, done });
 const tWait = turn => ({ wait:true, text:"<b>Opponent's turn.</b> Watch what they do.", anchor:()=>T$('board-1'), done:()=> state.current===0 && tMe().turnCount===turn });
 
+// The attack the defender is reacting to (vs the scripted AI): its prompt buttons
+function tDefBtn(re){ return [...document.querySelectorAll('#deflectPrompt button')].find(b=>re.test(b.textContent)) || T$('deflectPrompt'); }
+const tHandBulwark = () => tHandEl('Bulwark');
+
 const TUT_STEPS = [
   // ---- Turn 1 ----
   { info:true, anchor:tEnemyHp, text:"<b>Welcome to Enscra.</b> This tutorial will show you the rules. Your opponent has <b>7 HP</b> here to keep it short, but real games always start at <b>30</b>." },
@@ -4902,13 +5007,13 @@ const TUT_STEPS = [
   tNextStep("Your Devotion is spent. Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
   tNextStep("<b>Draw phase.</b> Normally you draw a card here, but whoever goes first skips their first draw. Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
   Object.assign(tPlayStep('Ember Acolyte', 0, "<b>Main phase:</b> play cards. Cards cost <b>Attune</b> (the highlighted <b>A</b> counter), a separate pool from Devotion. A Vessel costs its Level. "), { also:tAttuneBadge }),
-  { info:true, anchor:()=>tZone(0,0), text:"Ember Acolyte is in play: <b>3 ATK / 1 DEF</b>, bottom-right of the card. It's <b>SICK</b>: Vessels can't attack on the turn they're played.<br><br>Tip: <b>hold your finger</b> on any card to see it full size." },
+  { info:true, anchor:()=>tZone(0,0), text:"Ember Acolyte is in play: <b>3 ATK / 1 DEF</b>, bottom-right of the card. It's <b>SICK</b>: Vessels can't attack on the turn they're played." },
   { info:true, anchor:()=>tZone(0,0), text:"<b>Tip:</b> hold any card to see it up close. Words marked with a <b>?</b> can be tapped to explain exactly what they do." },
   { text:"There's nothing else to do this turn. Tap <b>Skip to End Phase</b> to jump to the end of your turn.", anchor:()=> tVis(T$('skipToEndBtn')) ? T$('skipToEndBtn') : tNext(), allow:{ next:1 }, done:()=> tPh()==='End' },
   tNextStep("Tap <b>End Turn</b> to pass to your opponent.", ()=> state.current===1),
   tWait(2),
   // ---- Turn 2 ----
-  { info:true, anchor:null, text:"Your opponent devoted a White column and played <b>Gale Herald</b> (2 ATK / 2 DEF)." },
+  { info:true, anchor:()=>tZone(1,0), text:"Your opponent devoted a White column and played <b>Gale Herald</b> (2 ATK / 2 DEF)." },
   { text:()=> state.selectedAttuneColour==='Red'
         ? `Tap your <b>${tMe().columns[1].colour==='Red'?'3rd':'2nd'} column</b>.`
         : "Turn 2 gives you <b>2 Devotion</b>. Devote <b>Red</b> to your <b>2nd and 3rd columns</b>: tap Red, then a column, twice.",
@@ -4918,23 +5023,24 @@ const TUT_STEPS = [
   tNextStep("Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
   tNextStep("<b>Draw phase:</b> you drew <b>The Emberwastes</b>, a Realm. Keep it for later. Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
   tPlayStep('Cinder Runner', 1, "Turn 2 gives you <b>2 Attune</b> too. Play <b>Cinder Runner</b> in your 2nd column. "),
+  { info:true, anchor:tAttuneBadge, text:"We only used <b>1 Attune</b> on Cinder Runner, so we have <b>1 left over</b>. Hold on to it, we'll use it in battle." },
   tNextStep("Off to battle. Tap <b>Next Phase</b>.", ()=> tPh()==='Battle'),
   tAttackStep(()=> state.selectedAttackerZone==='0' ? "Now tap <b>Gale Herald</b> to attack it." : "<b>Battle phase.</b> Acolyte isn't sick any more. Tap <b>anywhere on Ember Acolyte</b> to pick it as your attacker.", 0, 0),
-  { anchor:()=>tOfferBtn(/Yes/), allow:{ acceptRiteOffer:1 }, done:()=> state.pendingRiteOffer && state.pendingRiteOffer.accepted,
-    text:"<b>How combat works:</b> both Vessels hit each other at the same time. Each one's ATK is dealt to the other's DEF, and if it reaches that DEF, the Vessel dies. Acolyte (3 ATK) kills Herald (2 DEF), but Herald (2 ATK) kills Acolyte (1 DEF) too. An <b>Instant Rite</b> can save it. Tap <b>Yes</b>." },
-  tRiteStep(()=> state.selectedCardId===tHandId('Bulwark') ? "Now tap your <b>Ember Acolyte</b>." : "Tap <b>Bulwark</b> (+3 DEF this turn), then <b>Play</b>.", 'Bulwark', 0),
+  { anchor:()=>tOfferBtn(/Yes/), also:tHandBulwark, allow:{ acceptRiteOffer:1 }, done:()=> state.pendingRiteOffer && state.pendingRiteOffer.accepted,
+    text:"<b>How combat works:</b> both Vessels hit each other at the same time. Each one's ATK is dealt to the other's DEF, and if it reaches that DEF, the Vessel dies. Acolyte (3 ATK) kills Herald (2 DEF), but Herald (2 ATK) kills Acolyte (1 DEF) too.<br><br>We have <b>1 Attune left over</b> from Cinder Runner, so let's use it on <b>Bulwark</b> to save Acolyte. Tap <b>Yes</b>." },
+  tRiteStep(()=> state.selectedCardId===tHandId('Bulwark') ? "Now tap your <b>Ember Acolyte</b>." : "Tap <b>Bulwark</b> (prevents the next 3 damage to a Vessel this turn), then <b>Play</b>.", 'Bulwark', 0),
   { anchor:()=>tOfferBtn(/Resolve/), allow:{ resolveAttackNowFromOffer:1 }, done:()=> !tAi().front[0],
-    text:"See the <b>yellow 4</b>? Yellow means a stat has changed from what's printed. Acolyte is now 3/4, so it survives. Tap <b>Resolve Attack Now</b>." },
+    text:"See the green <b>🛡 3</b> on Acolyte? Bulwark will stop the next 3 damage to it this turn. Herald only deals 2, so Acolyte survives. Tap <b>Resolve Attack Now</b>." },
   { info:true, anchor:()=> document.querySelector('#board-1 .voidZoneBig') || T$('board-1'), text:"Gale Herald is destroyed and goes to <b>The Void</b> (highlighted), the discard pile. Your opponent lost no HP though: Vessels fighting each other don't hurt players. <b>Direct attacks</b> and some card effects do." },
   tNextStep("That's your turn. Tap <b>Next Phase</b> through to <b>End Turn</b>.", ()=> state.current===1),
   tWait(3),
   // ---- Turn 3 ----
-  { info:true, anchor:null, text:"Your opponent played <b>Tide Skirmisher</b> (2/2)." },
+  { info:true, anchor:()=>tZone(1,1), also:()=>tZone(1,0), text:"Your opponent played <b>Tide Skirmisher</b> and another <b>Gale Herald</b> (both 2 ATK / 2 DEF)." },
   { text:()=> state.selectedAttuneColour==='Red' ? "Tap your <b>3rd column</b> to raise it to Level 2." : "<b>Levels.</b> Flame Zealot in your hand is <b>Level 2</b>, so it needs a Red column at Level 2 or higher. Devoting the same colour to a column again raises it 1 Level. Tap <b>Red</b>.",
     anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0,2) : tColourBtn('Red'),
     allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>c===2&&col==='Red' }, done:()=> tMe().columns[2].grade>=2 },
   tNextStep("You don't have to spend all your Devotion, though it's usually better to use it if you can. Here it doesn't matter. Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
-  tNextStep("Tap <b>Next Phase</b> to draw and move on to Main.", ()=> tPh()==='Main1'),
+  tNextStep("Tap <b>Next Phase</b> to draw and move on to Main. You'll draw another <b>Bulwark</b>.", ()=> tPh()==='Main1'),
   tPlayStep('Flame Zealot', 2, "Play <b>Flame Zealot</b> (Level 2, so it costs 2 Attune) in your 3rd column. "),
   tNextStep("Tap <b>Next Phase</b> for battle.", ()=> tPh()==='Battle'),
   { info:true, anchor:()=>tZone(0,1), text:"Read <b>Cinder Runner</b>: when it destroys a Vessel in combat, it deals <b>1 damage to the player</b> too. It will trade with Tide Skirmisher and both will die, but that extra damage makes the trade worth it." },
@@ -4942,34 +5048,50 @@ const TUT_STEPS = [
   { anchor:()=>tOfferBtn(/^No/), allow:{ declineRiteOffer:1 }, done:()=> !tAi().front[1],
     text:"Runner's 2 ATK already beats Skirmisher's 2 DEF, so you don't need a Rite this time. Tap <b>No</b>." },
   { info:true, anchor:tEnemyHp, text:"Both Vessels died and went to The Void, and <b>Cinder Runner's</b> effect hit your opponent for 1. They're on <b>6 HP</b>." },
-  tAttackStep(()=> state.selectedAttackerZone==='0' ? "Tap <b>Attack directly</b>." : "Their board is empty, so you can hit them <b>directly</b>. Tap <b>Ember Acolyte</b>.", 0, null),
-  { anchor:()=>tOfferBtn(/^No/), allow:{ declineRiteOffer:1 }, done:()=> tAi().hp<=3, text:"No Rite needed. Tap <b>No</b>." },
-  { info:true, anchor:tEnemyHp, text:"3 damage straight to their HP. They're down to <b>3</b>." },
+  { info:true, anchor:()=>tZone(1,0), also:()=>tZone(0,0), text:"<b>While your opponent has Vessels in play, you can't attack them directly.</b> You have to attack one of their Vessels first. Gale Herald is still there, and Acolyte would just trade with it, so we'll keep Acolyte back this turn." },
+  { info:true, anchor:tAttuneBadge, text:"You still have <b>1 Attune</b>. Attune you don't spend lasts until your next turn starts, so you can use it on your <b>opponent's turn</b> for Instant Rites like Bulwark." },
   tNextStep("End your turn: <b>Next Phase</b> through to <b>End Turn</b>.", ()=> state.current===1),
+  { wait:true, text:"<b>Opponent's turn.</b> Watch what they do.", anchor:()=>T$('board-1'), done:()=> !!state.pendingAttack },
+  { anchor:()=>tDefBtn(/Instant/), also:()=>tZone(1,0), allow:{ startDefenseCasting:1 }, done:()=> defenseCasting(),
+    text:"<b>You're being attacked!</b> Gale Herald (2 ATK) is attacking your Ember Acolyte (1 DEF). You can cast <b>Instant Rites</b> when you're attacked, using the Attune you saved. Tap <b>Cast an Instant Rite</b>." },
+  tRiteStep(()=> state.selectedCardId===tHandId('Bulwark') ? "Now tap your <b>Ember Acolyte</b>." : "Tap <b>Bulwark</b>, then <b>Play</b>.", 'Bulwark', 0),
+  { anchor:()=>tDefBtn(/Resolve/), allow:{ declineDeflect:1 }, done:()=> !tAi().front[0],
+    text:"Acolyte has <b>🛡 3</b> now. Tap <b>Done — Resolve Attack</b>." },
+  { info:true, anchor:()=>tZone(0,0), text:"The shield stopped Herald's 2 damage, and <b>defending Vessels hit back too</b>: Acolyte's 3 ATK destroyed Herald." },
   tWait(4),
   // ---- Turn 4 ----
-  { info:true, anchor:null, text:"Your opponent raised a Blue column to Level 2 and played <b>Wavebreak Sentinel</b> (4/2)." },
-  tNextStep("Nothing to devote this turn. Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
+  { info:true, anchor:()=>tZone(1,1), text:"Your opponent also raised a Blue column to Level 2 and played <b>Wavebreak Sentinel</b> (4 ATK / 2 DEF)." },
+  { text:()=> state.selectedAttuneColour==='Red' ? "Tap your <b>3rd column</b> to raise it to Level 3." : "Turn 4: <b>3 Devotion</b>. Nothing in your hand needs a new column, but devoting now gets you ready for <b>bigger cards</b> later. First, raise your 3rd column to <b>Level 3</b>: tap <b>Red</b>.",
+    anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0,2) : tColourBtn('Red'),
+    allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>c===2&&col==='Red' }, done:()=> tMe().columns[2].grade>=3 },
+  { text:()=> state.selectedAttuneColour==='Red' ? "Tap your <b>4th column</b>." : "Now use your last 2 Devotion on your <b>4th column</b>: tap <b>Red</b>, then the column, twice. That makes it <b>Red Level 2</b>.",
+    anchor:()=> state.selectedAttuneColour==='Red' ? tZone(0,3) : tColourBtn('Red'),
+    allow:{ selectAttuneColour:c=>c==='Red', attuneColumn:(c,col)=>c===3&&col==='Red' }, done:()=> tMe().columns[3].grade>=2 },
+  tNextStep("All your Devotion is used. Tap <b>Next Phase</b>.", ()=> tPh()!=='Devotion'),
   tNextStep("Tap <b>Next Phase</b>.", ()=> tPh()==='Main1'),
   { text:()=> state.selectedCardId===tHandId('The Emberwastes') ? "Tap <b>The Emberwastes</b> again to cast it." : "<b>Realms</b> change the whole board, and only one can be in play at a time. Tap <b>The Emberwastes</b>, then <b>Play</b>.",
     anchor:()=> tHandEl('The Emberwastes'), allow:{ selectCard:id=>id===tHandId('The Emberwastes'), castSpellCard:id=>id===tHandId('The Emberwastes') },
     done:()=> !!(state.realm && state.realm.name==='The Emberwastes') },
-  { info:true, anchor:()=>tZone(0,2), text:"The Emberwastes gives every <b>Red</b> Vessel +1 ATK, and every <b>Green</b> Vessel −1 ATK, for <b>both</b> players. That's the catch with Realms. Your Red Vessels' ATK just turned yellow." },
+  { info:true, anchor:()=>tZone(0,2), text:"The Emberwastes gives every <b>Red</b> Vessel +1 ATK, and every <b>Green</b> Vessel −1 ATK, for <b>both</b> players. That's the catch with Realms. Your Red Vessels' ATK just turned <b>yellow</b>: yellow means a stat has changed from what's printed." },
   tNextStep("Tap <b>Next Phase</b> for battle.", ()=> tPh()==='Battle'),
   { info:true, anchor:()=>tZone(0,2), text:"<b>Flame Zealot</b> has <b>Breakthrough</b>: when it destroys a Vessel, any ATK beyond that Vessel's DEF carries through to the player." },
   tAttackStep(()=> state.selectedAttackerZone==='2' ? "Now tap <b>Wavebreak Sentinel</b>." : "Attack <b>Wavebreak Sentinel</b> with <b>Flame Zealot</b>.", 2, 1),
   { anchor:()=>tOfferBtn(/Yes/), allow:{ acceptRiteOffer:1 }, done:()=> state.pendingRiteOffer && state.pendingRiteOffer.accepted, text:"Let's make it hurt. Tap <b>Yes</b>." },
   tRiteStep(()=> state.selectedCardId===tHandId('Searing Strike') ? "Now tap your <b>Flame Zealot</b>." : "Tap <b>Searing Strike</b> (+2 ATK this turn), then <b>Play</b>.", 'Searing Strike', 2),
-  { anchor:()=>tOfferBtn(/Resolve/), allow:{ resolveAttackNowFromOffer:1 }, done:()=> state.gameOver,
-    text:"Flame Zealot is now <b>7 ATK</b>. Sentinel has 2 DEF, so <b>5 breaks through</b>, and they only have 3 HP. Tap <b>Resolve Attack Now</b>." },
+  { anchor:()=>tOfferBtn(/Resolve/), allow:{ resolveAttackNowFromOffer:1 }, done:()=> !tAi().front[1],
+    text:"Flame Zealot is now <b>7 ATK</b>. Sentinel has 2 DEF, so <b>5 breaks through</b> to the player. Tap <b>Resolve Attack Now</b>." },
+  { info:true, anchor:tEnemyHp, text:"5 damage broke through. They're down to <b>1 HP</b>." },
+  Object.assign(tAttackStep(()=> state.selectedAttackerZone==='0' ? "Tap <b>Attack directly</b>." : "Their board is empty now, so you <b>can</b> attack them directly. Tap <b>Ember Acolyte</b> to finish it.", 0, null),
+    { done:()=> state.gameOver }),
   { wait:true, anchor:null, text:"", done:()=>false },
 ];
 
-// What the scripted opponent does on each of its turns: [column, colour] devotions, then [card, column] plays.
+// What the scripted opponent does on each of its turns: [column, colour] devotions, [card, column] plays,
+// then [attacker column, target column] attacks.
 const TUT_AI_PLAN = {
   1: { attune:[[0,'White']], place:[['Gale Herald',0]] },
-  2: { attune:[[1,'Blue']],  place:[['Tide Skirmisher',1]] },
-  3: { attune:[[1,'Blue']],  place:[['Wavebreak Sentinel',1]] },
+  2: { attune:[[1,'Blue']],  place:[['Tide Skirmisher',1],['Gale Herald',0]] },
+  3: { attune:[[1,'Blue']],  place:[['Wavebreak Sentinel',1]], attack:[[0,0]] },
 };
 
 function tutStack(pl, handNames, drawNames){
@@ -4986,8 +5108,8 @@ function tutBegin(){
   const noDeflect = TIDEWIND_RITES.filter(r=>r.name!=='Deflect');
   const me = newPlayer("Player 1 — Emberroot (Red/Green)", EMBERROOT_VESSELS, EMBERROOT_RITES, EMBERROOT_REALMS, true);
   const them = newPlayer("Player 2 — Tidewind (White/Blue)", TIDEWIND_VESSELS, noDeflect, TIDEWIND_REALMS, false);
-  tutStack(me, ['Ember Acolyte','Cinder Runner','Bulwark','Searing Strike','Flame Zealot'], ['The Emberwastes','Rootling Guard','Stoneskin Tender']);
-  tutStack(them, ['Gale Herald','Tide Skirmisher','Wavebreak Sentinel','Foresight','Crosswind'], ['Current Adept','Riptide Caller','Whisperwind Page']);
+  tutStack(me, ['Ember Acolyte','Cinder Runner','Bulwark','Searing Strike','Flame Zealot'], ['The Emberwastes','Bulwark','Rootling Guard']);
+  tutStack(them, ['Gale Herald','Tide Skirmisher','Wavebreak Sentinel','Foresight','Crosswind'], ['Gale Herald','Current Adept','Riptide Caller']);
   them.hp = 7;
   Object.assign(state, { players:[me, them], current:0, phaseIdx:0, selectedCardId:null, selectedAttackerZone:null,
     selectedAttuneColour:null, gameOver:false, pendingEffect:null, pendingAttack:null, pendingRiteOffer:null,
@@ -5005,7 +5127,8 @@ function tutGate(name, asNext){
   const orig = window[name];
   if(typeof orig!=='function') return;
   window[name] = function(...a){
-    if(!TUT.active || TUT.depth>0 || state.current!==0 || state.gameOver) return orig.apply(this, a);
+    const humanActing = state.current===0 || !!state.pendingAttack; // the player reacting to the AI's attack counts too
+    if(!TUT.active || TUT.depth>0 || !humanActing || state.gameOver) return orig.apply(this, a);
     const st = TUT_STEPS[TUT.step];
     const rule = st && st.allow && (asNext ? st.allow.next : st.allow[name]);
     const ok = rule===1 || (typeof rule==='function' && rule(...a));
@@ -5016,7 +5139,8 @@ function tutGate(name, asNext){
   };
 }
 ['selectAttuneColour','attuneColumn','selectCard','placeSelected','castRiteAtZone','castSpellCard','selectAttacker',
- 'resolveAttack','enemyFaceClick','acceptRiteOffer','declineRiteOffer','resolveAttackNowFromOffer','discardCard'].forEach(n=>tutGate(n));
+ 'resolveAttack','enemyFaceClick','acceptRiteOffer','declineRiteOffer','resolveAttackNowFromOffer','discardCard',
+ 'startDefenseCasting','declineDeflect'].forEach(n=>tutGate(n));
 tutGate('requestNextPhase', true); tutGate('skipToEndPhase', true);
 
 // ---- scripted opponent ----
@@ -5025,15 +5149,20 @@ tutGate('requestNextPhase', true); tutGate('skipToEndPhase', true);
   aiStep = function(){
     if(!TUT.active) return baseAiStep();
     if(state.gameOver || state.current!==1) return;
+    if(state.pendingAttack) return; // the player is responding to our attack
     if(state.pendingEffect){ state.pendingEffect = null; render(); return; }
     const a = tAi(), plan = TUT_AI_PLAN[a.turnCount] || {attune:[], place:[]};
-    if(TUT.aiTurn!==a.turnCount){ TUT.aiTurn = a.turnCount; TUT.aiA = 0; TUT.aiP = 0; }
+    if(TUT.aiTurn!==a.turnCount){ TUT.aiTurn = a.turnCount; TUT.aiA = 0; TUT.aiP = 0; TUT.aiK = 0; }
     const ph = tPh();
     if(ph==='Devotion' && TUT.aiA<plan.attune.length){ const [c,col] = plan.attune[TUT.aiA++]; attuneColumn(c, col, attuneTargetGrade(1,c,col)); return; }
     if(ph==='Main1' && TUT.aiP<plan.place.length){
       const [n,c] = plan.place[TUT.aiP++]; const card = a.hand.find(x=>x.name===n);
       if(card){ state.selectedCardId = card.id; placeSelected(c); } else render();
       return;
+    }
+    if(ph==='Battle' && plan.attack && TUT.aiK<plan.attack.length){
+      const [ac,tc] = plan.attack[TUT.aiK++];
+      if(a.front[ac] && tMe().front[tc]){ state.selectedAttackerZone = String(ac); resolveAttack(tc, false); return; }
     }
     nextPhase();
   };
